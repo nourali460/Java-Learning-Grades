@@ -107,7 +107,7 @@ app.get('/whoami', verifyToken, (req, res) => {
     res.json({ user: req.user.name || req.user.id, role: req.user.role });
 });
 
-app.post('/admins/add', verifyToken, requireRole('admin'), async (req, res) => {
+app.post('/admins/add', verifyToken, requireRole('super'), async (req, res) => {
     const { name, password } = req.body;
     if (!name || !password) return res.status(400).json({ message: 'Missing fields' });
     if (name.trim() === SUPER_ADMIN) return res.status(403).json({ message: 'Super admin cannot be created via API' });
