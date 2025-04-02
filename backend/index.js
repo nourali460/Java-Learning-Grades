@@ -161,3 +161,10 @@ app.delete('/admins/remove', verifyToken, requireRole('admin'), async (req, res)
     await db.collection('admins').deleteOne({ name });
     res.json({ message: 'Admin removed' });
 });
+
+// 👇 Safely bootstrap and start the server
+bootstrapSuperAdmin().then(() => {
+    const PORT = process.env.PORT || 3000;
+    console.log("✅ Server listening on port", PORT);
+    app.listen(PORT, () => console.log(`🟢 Backend running on http://localhost:${PORT}`));
+});
