@@ -1,9 +1,10 @@
-// Secure index.js with bcrypt + JWT + Role-based Route Protection
+// index.js - Bootstraps Super Admin on Startup (Render Ready), Token-Based Rate Limiting, Secure Auth
 const express = require('express');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
@@ -11,9 +12,31 @@ app.use(cors());
 app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const SUPER_ADMIN = process.env.SUPER_ADMIN || 'ali';
 const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri);
 let db;
+
+// Token/IP fallback rate limiter
+const tokenBasedLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 min
+    max: 100,
+    keyGenerator: (req) => {
+        const auth = req.headers['authorization'];
+        if (auth?.startsWith('Bearer ')) {
+            try {
+                const token = auth.split(' ')[1];
+                const decoded = jwt.verify(token, JWT_SECRET);
+                return decoded.name || decoded.id;
+            } catch {
+                return req.ip;
+            }
+        }
+        return req.ip;
+    },
+    message: '⏱️ Too many requests. Please try again later.'
+});
+app.use(tokenBasedLimiter);
 
 async function connectToMongo() {
     if (!db) {
@@ -24,9 +47,30 @@ async function connectToMongo() {
     return db;
 }
 
+async function bootstrapSuperAdmin() {
+    const db = await connectToMongo();
+    const admins = db.collection('admins');
+    const password = process.env.DEFAULT_ADMIN_PASSWORD;
+
+    if (!SUPER_ADMIN || !password) {
+        console.warn('⚠️ SUPER_ADMIN or DEFAULT_ADMIN_PASSWORD not set. Skipping super admin creation.');
+        return;
+    }
+
+    const exists = await admins.findOne({ name: SUPER_ADMIN });
+    if (exists) {
+        console.log(`✅ Super admin '${SUPER_ADMIN}' already exists. Skipping.`);
+        return;
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    await admins.insertOne({ name: SUPER_ADMIN, password: hash });
+    console.log(`🚀 Super admin '${SUPER_ADMIN}' created successfully.`);
+}
+
 function verifyToken(req, res, next) {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = authHeader?.split(' ')[1];
     if (!token) return res.sendStatus(401);
 
     jwt.verify(token, JWT_SECRET, (err, user) => {
@@ -43,32 +87,52 @@ function requireRole(role) {
     };
 }
 
-// === Admin Routes ===
-app.post('/admins/add', async (req, res) => {
+app.get('/roles', (_req, res) => {
+    res.json({
+        table: [
+            { action: '🔐 Log in (/admins/validate)', superAdmin: true, admin: true, student: false },
+            { action: '🔐 Log in (/validateStudent)', superAdmin: false, admin: false, student: true },
+            { action: '➕ Add Admin (/admins/add)', superAdmin: true, admin: false, student: false },
+            { action: '➖ Remove Admin (/admins/remove)', superAdmin: true, admin: false, student: false },
+            { action: '📋 View All Admins (/admins)', superAdmin: true, admin: true, student: true },
+            { action: '✅ Check if Admin Exists (/admins/contains)', superAdmin: true, admin: true, student: true },
+            { action: '➕ Add Student (/students/add)', superAdmin: true, admin: true, student: false },
+            { action: '➖ Remove Student (/students/remove)', superAdmin: true, admin: true, student: false },
+            { action: '📤 Submit Grade (/grades POST)', superAdmin: false, admin: false, student: true },
+            { action: '📥 View Grades (/grades GET)', superAdmin: true, admin: true, student: true }
+        ]
+    });
+});
+
+app.get('/whoami', verifyToken, (req, res) => {
+    res.json({ user: req.user.name || req.user.id, role: req.user.role });
+});
+
+app.post('/admins/add', verifyToken, requireRole('admin'), async (req, res) => {
     const { name, password } = req.body;
-    if (!name || !password)
-        return res.status(400).json({ message: 'Missing fields' });
+    if (!name || !password) return res.status(400).json({ message: 'Missing fields' });
+    if (name === SUPER_ADMIN) return res.status(403).json({ message: 'Super admin cannot be created via API' });
+    if (req.user.name !== SUPER_ADMIN) return res.status(403).json({ message: 'Only super admin can add admins' });
 
     const db = await connectToMongo();
     const hash = await bcrypt.hash(password, 10);
-    await db.collection('admins').updateOne(
-        { name },
-        { $set: { name, password: hash } },
-        { upsert: true }
-    );
+    await db.collection('admins').updateOne({ name }, { $set: { name, password: hash } }, { upsert: true });
     res.json({ message: 'Admin added/updated' });
 });
 
 app.post('/admins/validate', async (req, res) => {
     const { name, password } = req.body;
+    if (!name || !password) return res.status(400).json({ success: false, message: 'Missing fields' });
+
     const db = await connectToMongo();
     const admin = await db.collection('admins').findOne({ name });
-    if (!admin) return res.status(401).json({ success: false });
+    if (!admin) return res.status(401).json({ success: false, message: 'User not found' });
 
     const match = await bcrypt.compare(password, admin.password);
-    if (!match) return res.status(401).json({ success: false });
+    if (!match) return res.status(401).json({ success: false, message: 'Incorrect password' });
 
-    const token = jwt.sign({ name, role: 'admin' }, JWT_SECRET, { expiresIn: '3d' });
+    const role = name === SUPER_ADMIN ? 'super' : 'admin';
+    const token = jwt.sign({ name, role }, JWT_SECRET, { expiresIn: '3d' });
     res.json({ success: true, token });
 });
 
@@ -85,25 +149,23 @@ app.get('/admins', async (_req, res) => {
     res.json(admins.map(a => a.name));
 });
 
-app.delete('/admins/remove', async (req, res) => {
+app.delete('/admins/remove', verifyToken, requireRole('admin'), async (req, res) => {
     const { name } = req.body;
+    if (name === SUPER_ADMIN) return res.status(403).json({ message: 'Cannot remove super admin' });
+    if (req.user.name !== SUPER_ADMIN) return res.status(403).json({ message: 'Only super admin can remove admins' });
+
     const db = await connectToMongo();
     await db.collection('admins').deleteOne({ name });
     res.json({ message: 'Admin removed' });
 });
 
-// === Student Routes ===
 app.post('/students/add', verifyToken, requireRole('admin'), async (req, res) => {
     const { id, password } = req.body;
     if (!id || !password) return res.status(400).json({ message: 'Missing fields' });
 
     const db = await connectToMongo();
     const hash = await bcrypt.hash(password, 10);
-    await db.collection('students').updateOne(
-        { id },
-        { $set: { id, password: hash } },
-        { upsert: true }
-    );
+    await db.collection('students').updateOne({ id }, { $set: { id, password: hash } }, { upsert: true });
     res.json({ message: 'Student added/updated' });
 });
 
@@ -114,7 +176,6 @@ app.delete('/students/remove', verifyToken, requireRole('admin'), async (req, re
     res.json({ message: 'Student removed' });
 });
 
-// === Student Login (With Admin Validation) ===
 app.post('/validateStudent', async (req, res) => {
     const { id, password, admin } = req.body;
     if (!admin) return res.status(400).json({ success: false, message: 'Missing admin name' });
@@ -133,7 +194,6 @@ app.post('/validateStudent', async (req, res) => {
     res.json({ success: true, token });
 });
 
-// === Grade Submission (Protected for Students Only) ===
 app.post('/grades', verifyToken, requireRole('student'), async (req, res) => {
     const { studentId, course, assignment, grade, consoleOutput, timestamp, admin } = req.body;
     if (!studentId || !course || !assignment || !grade || !admin)
@@ -158,7 +218,6 @@ app.post('/grades', verifyToken, requireRole('student'), async (req, res) => {
     res.json({ message: 'Grade submitted successfully', upserted: result.upsertedCount > 0 });
 });
 
-// === Grade Retrieval (Open for Now) ===
 app.get('/grades', async (req, res) => {
     const { studentId, admin, course, assignment } = req.query;
     const db = await connectToMongo();
@@ -172,6 +231,7 @@ app.get('/grades', async (req, res) => {
     res.json(grades);
 });
 
-// === Server Startup ===
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Backend running on port ${PORT}`));
+bootstrapSuperAdmin().then(() => {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => console.log(`✅ Backend running on port ${PORT}`));
+});
