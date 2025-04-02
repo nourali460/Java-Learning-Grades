@@ -132,6 +132,7 @@ app.post('/admins/add', verifyToken, requireRole('admin'), async (req, res) => {
 
 app.post('/admins/validate', async (req, res) => {
     const { name, password } = req.body;
+    console.log('🧪 /admins/validate called with:', name);
     if (!name || !password) return res.status(400).json({ success: false, message: 'Missing fields' });
 
     const db = await connectToMongo();
