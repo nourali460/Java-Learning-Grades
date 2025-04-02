@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const SUPER_ADMIN = process.env.SUPER_ADMIN || 'ali';
+const SUPER_ADMIN = (process.env.SUPER_ADMIN || 'ali').trim();
 const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri);
 let db;
@@ -110,8 +110,8 @@ app.get('/whoami', verifyToken, (req, res) => {
 app.post('/admins/add', verifyToken, requireRole('admin'), async (req, res) => {
     const { name, password } = req.body;
     if (!name || !password) return res.status(400).json({ message: 'Missing fields' });
-    if (name === SUPER_ADMIN) return res.status(403).json({ message: 'Super admin cannot be created via API' });
-    if (req.user.name !== SUPER_ADMIN) return res.status(403).json({ message: 'Only super admin can add admins' });
+    if (name.trim() === SUPER_ADMIN) return res.status(403).json({ message: 'Super admin cannot be created via API' });
+    if (String(req.user.name).trim() !== SUPER_ADMIN) return res.status(403).json({ message: 'Only super admin can add admins' });
 
     const db = await connectToMongo();
     const hash = await bcrypt.hash(password, 10);
@@ -134,7 +134,7 @@ app.post('/admins/validate', async (req, res) => {
     const match = await bcrypt.compare(password, admin.password);
     if (!match) return res.status(401).json({ success: false, message: 'Incorrect password' });
 
-    const role = admin.role || (name === SUPER_ADMIN ? 'super' : 'admin');
+    const role = admin.role || (name.trim() === SUPER_ADMIN ? 'super' : 'admin');
     const token = jwt.sign({ name, role }, JWT_SECRET, { expiresIn: '3d' });
     res.json({ success: true, token });
 });
@@ -154,8 +154,8 @@ app.get('/admins', async (_req, res) => {
 
 app.delete('/admins/remove', verifyToken, requireRole('admin'), async (req, res) => {
     const { name } = req.body;
-    if (name === SUPER_ADMIN) return res.status(403).json({ message: 'Cannot remove super admin' });
-    if (req.user.name !== SUPER_ADMIN) return res.status(403).json({ message: 'Only super admin can remove admins' });
+    if (name.trim() === SUPER_ADMIN) return res.status(403).json({ message: 'Cannot remove super admin' });
+    if (String(req.user.name).trim() !== SUPER_ADMIN) return res.status(403).json({ message: 'Only super admin can remove admins' });
 
     const db = await connectToMongo();
     await db.collection('admins').deleteOne({ name });
