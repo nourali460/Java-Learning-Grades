@@ -1,4 +1,4 @@
-// index.js - Bootstraps Super Admin on Startup (Render Ready), Token-Based Rate Limiting, Secure Auth
+// index.js - Bootstraps Super Admin on Startup (Render Ready), Role Stored in DB, Rate Limiting Enabled
 const express = require('express');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
@@ -17,9 +17,8 @@ const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri);
 let db;
 
-// Token/IP fallback rate limiter
 const tokenBasedLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 min
+    windowMs: 15 * 60 * 1000,
     max: 100,
     keyGenerator: (req) => {
         const auth = req.headers['authorization'];
@@ -64,7 +63,7 @@ async function bootstrapSuperAdmin() {
     }
 
     const hash = await bcrypt.hash(password, 10);
-    await admins.insertOne({ name: SUPER_ADMIN, password: hash });
+    await admins.insertOne({ name: SUPER_ADMIN, password: hash, role: 'super' });
     console.log(`🚀 Super admin '${SUPER_ADMIN}' created successfully.`);
 }
 
@@ -116,7 +115,11 @@ app.post('/admins/add', verifyToken, requireRole('admin'), async (req, res) => {
 
     const db = await connectToMongo();
     const hash = await bcrypt.hash(password, 10);
-    await db.collection('admins').updateOne({ name }, { $set: { name, password: hash } }, { upsert: true });
+    await db.collection('admins').updateOne(
+        { name },
+        { $set: { name, password: hash, role: 'admin' } },
+        { upsert: true }
+    );
     res.json({ message: 'Admin added/updated' });
 });
 
@@ -131,7 +134,7 @@ app.post('/admins/validate', async (req, res) => {
     const match = await bcrypt.compare(password, admin.password);
     if (!match) return res.status(401).json({ success: false, message: 'Incorrect password' });
 
-    const role = name === SUPER_ADMIN ? 'super' : 'admin';
+    const role = admin.role || (name === SUPER_ADMIN ? 'super' : 'admin');
     const token = jwt.sign({ name, role }, JWT_SECRET, { expiresIn: '3d' });
     res.json({ success: true, token });
 });
@@ -145,8 +148,8 @@ app.post('/admins/contains', async (req, res) => {
 
 app.get('/admins', async (_req, res) => {
     const db = await connectToMongo();
-    const admins = await db.collection('admins').find({}, { projection: { _id: 0, name: 1 } }).toArray();
-    res.json(admins.map(a => a.name));
+    const admins = await db.collection('admins').find({}, { projection: { _id: 0, name: 1, role: 1 } }).toArray();
+    res.json(admins);
 });
 
 app.delete('/admins/remove', verifyToken, requireRole('admin'), async (req, res) => {
@@ -157,81 +160,4 @@ app.delete('/admins/remove', verifyToken, requireRole('admin'), async (req, res)
     const db = await connectToMongo();
     await db.collection('admins').deleteOne({ name });
     res.json({ message: 'Admin removed' });
-});
-
-app.post('/students/add', verifyToken, requireRole('admin'), async (req, res) => {
-    const { id, password } = req.body;
-    if (!id || !password) return res.status(400).json({ message: 'Missing fields' });
-
-    const db = await connectToMongo();
-    const hash = await bcrypt.hash(password, 10);
-    await db.collection('students').updateOne({ id }, { $set: { id, password: hash } }, { upsert: true });
-    res.json({ message: 'Student added/updated' });
-});
-
-app.delete('/students/remove', verifyToken, requireRole('admin'), async (req, res) => {
-    const { id } = req.body;
-    const db = await connectToMongo();
-    await db.collection('students').deleteOne({ id });
-    res.json({ message: 'Student removed' });
-});
-
-app.post('/validateStudent', async (req, res) => {
-    const { id, password, admin } = req.body;
-    if (!admin) return res.status(400).json({ success: false, message: 'Missing admin name' });
-
-    const db = await connectToMongo();
-    const adminExists = await db.collection('admins').findOne({ name: admin });
-    if (!adminExists) return res.status(401).json({ success: false, message: 'Invalid admin' });
-
-    const student = await db.collection('students').findOne({ id });
-    if (!student) return res.status(401).json({ success: false });
-
-    const match = await bcrypt.compare(password, student.password);
-    if (!match) return res.status(401).json({ success: false });
-
-    const token = jwt.sign({ id, role: 'student' }, JWT_SECRET, { expiresIn: '3d' });
-    res.json({ success: true, token });
-});
-
-app.post('/grades', verifyToken, requireRole('student'), async (req, res) => {
-    const { studentId, course, assignment, grade, consoleOutput, timestamp, admin } = req.body;
-    if (!studentId || !course || !assignment || !grade || !admin)
-        return res.status(400).json({ message: 'Missing required fields' });
-
-    const db = await connectToMongo();
-    const gradeEntry = {
-        studentId: studentId.toString(),
-        course: course.toString(),
-        assignment: assignment.toString(),
-        grade: grade.toString(),
-        consoleOutput: consoleOutput?.toString() || '',
-        timestamp: timestamp || new Date().toISOString(),
-        admin: admin.toString()
-    };
-
-    const result = await db.collection('grades').updateOne(
-        { studentId: gradeEntry.studentId, course: gradeEntry.course, assignment: gradeEntry.assignment },
-        { $set: gradeEntry },
-        { upsert: true }
-    );
-    res.json({ message: 'Grade submitted successfully', upserted: result.upsertedCount > 0 });
-});
-
-app.get('/grades', async (req, res) => {
-    const { studentId, admin, course, assignment } = req.query;
-    const db = await connectToMongo();
-    const query = {};
-    if (studentId) query.studentId = studentId.toString();
-    if (admin) query.admin = admin.toString();
-    if (course) query.course = course.toString();
-    if (assignment) query.assignment = assignment.toString();
-
-    const grades = await db.collection('grades').find(query).toArray();
-    res.json(grades);
-});
-
-bootstrapSuperAdmin().then(() => {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => console.log(`✅ Backend running on port ${PORT}`));
 });
