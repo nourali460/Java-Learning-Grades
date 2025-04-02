@@ -111,7 +111,14 @@ app.post('/admins/add', verifyToken, requireRole('admin'), async (req, res) => {
     const { name, password } = req.body;
     if (!name || !password) return res.status(400).json({ message: 'Missing fields' });
     if (name.trim() === SUPER_ADMIN) return res.status(403).json({ message: 'Super admin cannot be created via API' });
-    if (String(req.user.name).trim() !== SUPER_ADMIN) return res.status(403).json({ message: 'Only super admin can add admins' });
+
+    console.log('🔐 Add Admin triggered by:', req.user);
+    console.log('🧪 req.user.name =', JSON.stringify(req.user.name));
+    console.log('🧪 SUPER_ADMIN =', JSON.stringify(SUPER_ADMIN));
+    console.log('🧪 Match result =', String(req.user.name).trim() === SUPER_ADMIN);
+
+    if (String(req.user.name).trim() !== SUPER_ADMIN)
+        return res.status(403).json({ message: 'Only super admin can add admins' });
 
     const db = await connectToMongo();
     const hash = await bcrypt.hash(password, 10);
