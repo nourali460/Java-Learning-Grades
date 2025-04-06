@@ -30,7 +30,21 @@ public class StudentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student ID cannot be empty");
         }
 
-        Student student = new Student();
+        if (dto.getEmail() == null || dto.getEmail().trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email cannot be empty");
+        }
+
+        // Check if a student with the same ID already exists
+        Optional<Student> existingById = studentRepository.findById(dto.getId());
+
+        // Check if a different student already has this email
+        Optional<Student> existingByEmail = studentRepository.findByEmail(dto.getEmail());
+        if (existingByEmail.isPresent() &&
+                (!existingById.isPresent() || !existingByEmail.get().getId().equals(dto.getId()))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use by another student");
+        }
+
+        Student student = existingById.orElse(new Student());
         student.setId(dto.getId());
         student.setPassword(passwordEncoder.encode(dto.getPassword()));
         student.setEmail(dto.getEmail());
@@ -38,7 +52,7 @@ public class StudentService {
         student.setPaid(dto.isPaid());
         student.setPaymentLink(dto.getPaymentLink());
         student.setActive(dto.isActive());
-        student.setCreatedAt(dto.getCreatedAt() != null ? dto.getCreatedAt() : Instant.now());
+        student.setCreatedAt(dto.getCreatedAt());
         student.setPaymentDate(dto.getPaymentDate());
 
         return studentRepository.save(student);

@@ -3,8 +3,10 @@ package com.nour.ali.java_learning_backend.service;
 import com.nour.ali.java_learning_backend.model.Admin;
 import com.nour.ali.java_learning_backend.repository.AdminRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 // Add this import
 import java.util.List;
 
@@ -34,17 +36,23 @@ public class AdminService {
     }
 
     public Admin addOrUpdateAdmin(Admin admin) {
+        if (adminRepository.existsByName(admin.getName())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Admin with this name already exists");
+        }
         admin.setPassword(passwordEncoder.encode(admin.getPassword()));
         return adminRepository.save(admin);
     }
 
+
     public boolean removeAdmin(String name) {
         if (!adminRepository.existsByName(name)) {
-            return false;
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Admin with name '" + name + "' does not exist");
         }
+
         adminRepository.deleteById(name);
         return true;
     }
+
 
     public boolean existsByName(String name) {
         return adminRepository.existsByName(name);
