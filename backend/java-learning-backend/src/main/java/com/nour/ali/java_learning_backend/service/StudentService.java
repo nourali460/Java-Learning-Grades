@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Service
@@ -36,7 +37,6 @@ public class StudentService {
         Optional<Student> existingById = studentRepository.findById(dto.getId());
         Optional<Student> existingByEmail = studentRepository.findByEmail(dto.getEmail());
 
-        // Prevent using the same email for another student (different ID)
         if (existingByEmail.isPresent() &&
                 (!existingById.isPresent() || !existingByEmail.get().getId().equals(dto.getId()))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use by another student");
@@ -44,17 +44,23 @@ public class StudentService {
 
         Student student = existingById.orElse(new Student());
         student.setId(dto.getId());
-        student.setPassword(passwordEncoder.encode(dto.getPassword()));
         student.setEmail(dto.getEmail());
+        student.setPassword(passwordEncoder.encode(dto.getPassword()));
         student.setAdmin(dto.getAdmin());
-        student.setPaid(dto.isPaid());
-        student.setPaymentLink(dto.getPaymentLink());
-        student.setActive(dto.isActive());
-        student.setCreatedAt(dto.getCreatedAt());
-        student.setPaymentDate(dto.getPaymentDate());
+
+        // Only set defaults if this is a new student
+        if (existingById.isEmpty()) {
+            student.setCreatedAt(Instant.now());
+            student.setPaid(false);
+            student.setActive(false);
+            student.setPaymentLink("");
+            student.setPaymentDate(null);
+        }
 
         return studentRepository.save(student);
     }
+
+
 
     public boolean removeStudent(String id) {
         if (!studentRepository.existsById(id)) {
