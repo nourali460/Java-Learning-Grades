@@ -54,8 +54,15 @@ public class AdminController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid or missing role in token");
         }
 
+        String name = request.getName();
+        if (name == null || name.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Admin name is required"));
+        }
+
+        boolean exists = adminService.existsByName(name);
+
         Admin admin = new Admin();
-        admin.setName(request.getName());
+        admin.setName(name);
         admin.setPassword(request.getPassword());
 
         AdminRole requestedRole = request.getRole();
@@ -63,8 +70,18 @@ public class AdminController {
         admin.setRole(finalRole);
 
         adminService.addOrUpdateAdmin(admin);
-        return ResponseEntity.ok(Map.of("message", "Admin added/updated"));
+
+        String statusMessage = exists
+                ? "Admin already existed — info updated"
+                : "New admin created";
+
+        return ResponseEntity.ok(Map.of(
+                "message", statusMessage,
+                "admin", name,
+                "role", finalRole.name()
+        ));
     }
+
 
     @DeleteMapping("/remove")
     public ResponseEntity<?> removeAdmin(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
