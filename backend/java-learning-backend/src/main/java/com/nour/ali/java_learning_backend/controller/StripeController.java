@@ -36,12 +36,14 @@ public class StripeController {
                                                 .setProductData(
                                                         SessionCreateParams.LineItem.PriceData.ProductData.builder()
                                                                 .setName("Course Access Fee")
+                                                                .setDescription("One-time payment for 12 months of course access")
                                                                 .build()
                                                 )
                                                 .build()
                                 )
                                 .build()
                 )
+                .putMetadata("studentId", studentId) // optional, useful for webhooks
                 .build();
 
         Session session = Session.create(params);

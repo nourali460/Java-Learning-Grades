@@ -85,4 +85,19 @@ public class StudentService {
     public Student save(Student student) {
         return studentRepository.save(student);
     }
+
+    public void markStudentAsPaid(String studentId) {
+        Optional<Student> optionalStudent = studentRepository.findById(studentId);
+
+        if (optionalStudent.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found");
+        }
+
+        Student student = optionalStudent.get();
+        student.setPaid(true);
+        student.setActive(true);
+        student.setPaymentDate(Instant.now());
+
+        studentRepository.save(student);
+    }
 }
