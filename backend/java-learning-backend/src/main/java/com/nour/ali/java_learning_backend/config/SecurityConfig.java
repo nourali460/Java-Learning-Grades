@@ -50,7 +50,8 @@ public class SecurityConfig {
                                 "/students/validate",
                                 "/roles",
                                 "/admins",
-                                "/admins/contains"
+                                "/admins/contains",
+                                "/api/stripe/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/grades").permitAll()
                         .requestMatchers(HttpMethod.POST, "/grades").authenticated()
