@@ -10,7 +10,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.util.Optional;
 
 @Service
@@ -34,11 +33,10 @@ public class StudentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email cannot be empty");
         }
 
-        // Check if a student with the same ID already exists
         Optional<Student> existingById = studentRepository.findById(dto.getId());
-
-        // Check if a different student already has this email
         Optional<Student> existingByEmail = studentRepository.findByEmail(dto.getEmail());
+
+        // Prevent using the same email for another student (different ID)
         if (existingByEmail.isPresent() &&
                 (!existingById.isPresent() || !existingByEmail.get().getId().equals(dto.getId()))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use by another student");

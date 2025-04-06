@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 import java.util.Optional;
@@ -40,12 +41,16 @@ public class StudentController {
             System.out.println("✅ Student added/updated: " + dto.getId());
             return ResponseEntity.ok().body("{\"message\": \"Student added/updated\"}");
 
-        } catch (DataIntegrityViolationException e) {
-            return ResponseEntity.status(400).body("{\"message\": \"A student with this email already exists.\"}");
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode())
+                    .body("{\"message\": \"" + e.getReason() + "\"}");
         } catch (Exception e) {
-            return ResponseEntity.status(403).body("{\"message\": \"Invalid or missing role in token\"}");
+            return ResponseEntity.status(500).body("{\"message\": \"Unexpected error occurred\"}");
         }
     }
+
+
+
 
     @DeleteMapping("/remove")
     public ResponseEntity<?> removeStudent(@RequestBody StudentRequestDTO dto, HttpServletRequest request) {
