@@ -55,32 +55,34 @@ public class AdminController {
         }
 
         String name = request.getName();
+        String password = request.getPassword();
+
         if (name == null || name.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Admin name is required"));
         }
 
         boolean exists = adminService.existsByName(name);
 
+        if (exists) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "message", "Admin already exists. Use update endpoint if you wish to modify."
+            ));
+        }
+
         Admin admin = new Admin();
         admin.setName(name);
-        admin.setPassword(request.getPassword());
-
-        AdminRole requestedRole = request.getRole();
-        AdminRole finalRole = (requestedRole != null) ? requestedRole : AdminRole.ADMIN;
-        admin.setRole(finalRole);
+        admin.setPassword(password); // Password will be encoded in service
+        admin.setRole(request.getRole() != null ? request.getRole() : AdminRole.ADMIN);
 
         adminService.addOrUpdateAdmin(admin);
 
-        String statusMessage = exists
-                ? "Admin already existed — info updated"
-                : "New admin created";
-
         return ResponseEntity.ok(Map.of(
-                "message", statusMessage,
+                "message", "New admin created",
                 "admin", name,
-                "role", finalRole.name()
+                "role", admin.getRole().name()
         ));
     }
+
 
 
     @DeleteMapping("/remove")
