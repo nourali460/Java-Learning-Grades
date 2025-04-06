@@ -1,7 +1,9 @@
 package com.nour.ali.java_learning_backend.service;
 
 import com.nour.ali.java_learning_backend.model.Admin;
+import com.nour.ali.java_learning_backend.model.Student;
 import com.nour.ali.java_learning_backend.repository.AdminRepository;
+import com.nour.ali.java_learning_backend.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,11 +19,13 @@ public class AdminService {
 
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
+    private final StudentRepository studentRepository;
 
     @Autowired
-    public AdminService(AdminRepository adminRepository, PasswordEncoder passwordEncoder) {
+    public AdminService(AdminRepository adminRepository, PasswordEncoder passwordEncoder, StudentRepository studentRepository) {
         this.adminRepository = adminRepository;
         this.passwordEncoder = passwordEncoder;
+        this.studentRepository = studentRepository;
     }
 
     public Optional<Admin> validateAdmin(String name, String password) {
@@ -61,4 +65,24 @@ public class AdminService {
     public List<Admin> getAllAdmins() {
         return adminRepository.findAll();
     }
+
+    public Optional<Student> getStudentById(String id) {
+        return studentRepository.findById(id);
+    }
+
+    public void updateStudentPassword(Student student, String rawPassword) {
+        student.setPassword(passwordEncoder.encode(rawPassword));
+        studentRepository.save(student);
+    }
+
+    public Optional<Admin> findByName(String name) {
+        return adminRepository.findById(name);
+    }
+
+    public void updateAdminPassword(Admin admin, String rawPassword) {
+        admin.setPassword(passwordEncoder.encode(rawPassword));
+        adminRepository.save(admin);
+    }
+
+
 }
