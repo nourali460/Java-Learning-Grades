@@ -30,18 +30,28 @@ public class GradeService {
 
     public GradeResponseDTO submitOrUpdateGrade(GradeRequestDTO dto) {
         Student student = studentRepository.findById(dto.getStudentId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student with ID '" + dto.getStudentId() + "' not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
 
         if (!student.isActive() || !student.isPaid()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Student has not completed payment");
         }
 
-        // 🔍 Try to find an existing grade
-        Grade grade = gradeRepository
-                .findByStudentIdAndCourseAndAssignment(dto.getStudentId(), dto.getCourse(), dto.getAssignment())
-                .orElse(new Grade());
+        Optional<Grade> optionalGrade = gradeRepository
+                .findByStudentIdAndCourseAndAssignment(dto.getStudentId(), dto.getCourse(), dto.getAssignment());
 
-        // ✍️ Set fields (either update existing or create new)
+        Grade grade;
+
+        if (optionalGrade.isPresent()) {
+            // 🔁 Updating existing grade
+            grade = optionalGrade.get();
+            System.out.println("📝 Updating existing grade ID: " + grade.getId());
+        } else {
+            // ➕ Creating new grade
+            grade = new Grade();
+            System.out.println("➕ Creating new grade");
+        }
+
+        // ✍️ Set/update fields
         grade.setStudentId(dto.getStudentId());
         grade.setCourse(dto.getCourse());
         grade.setAssignment(dto.getAssignment());
@@ -50,7 +60,7 @@ public class GradeService {
         grade.setTimestamp(dto.getTimestamp() != null ? dto.getTimestamp() : Instant.now());
         grade.setAdmin(dto.getAdmin());
 
-        Grade saved = gradeRepository.save(grade); // ✅ will UPDATE if grade has an id
+        Grade saved = gradeRepository.save(grade);
 
         return new GradeResponseDTO(
                 saved.getStudentId(),
@@ -63,14 +73,4 @@ public class GradeService {
         );
     }
 
-    public List<Grade> findGrades(String studentId, String admin, String course, String assignment) {
-        return gradeRepository.findAll().stream()
-                .filter(g ->
-                        (studentId == null || g.getStudentId().equals(studentId)) &&
-                                (admin == null || g.getAdmin().equals(admin)) &&
-                                (course == null || g.getCourse().equals(course)) &&
-                                (assignment == null || g.getAssignment().equals(assignment))
-                )
-                .collect(Collectors.toList());
-    }
 }
