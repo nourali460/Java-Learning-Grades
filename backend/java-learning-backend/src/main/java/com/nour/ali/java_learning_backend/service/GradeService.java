@@ -1,4 +1,3 @@
-// File: service/GradeService.java
 package com.nour.ali.java_learning_backend.service;
 
 import com.nour.ali.java_learning_backend.dto.GradeRequestDTO;
@@ -14,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,7 +36,12 @@ public class GradeService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Student has not completed payment");
         }
 
-        Grade grade = new Grade();
+        // 🔍 Try to find an existing grade
+        Grade grade = gradeRepository
+                .findByStudentIdAndCourseAndAssignment(dto.getStudentId(), dto.getCourse(), dto.getAssignment())
+                .orElse(new Grade());
+
+        // ✍️ Set fields (either update existing or create new)
         grade.setStudentId(dto.getStudentId());
         grade.setCourse(dto.getCourse());
         grade.setAssignment(dto.getAssignment());
@@ -45,7 +50,7 @@ public class GradeService {
         grade.setTimestamp(dto.getTimestamp() != null ? dto.getTimestamp() : Instant.now());
         grade.setAdmin(dto.getAdmin());
 
-        Grade saved = gradeRepository.save(grade);
+        Grade saved = gradeRepository.save(grade); // ✅ will UPDATE if grade has an id
 
         return new GradeResponseDTO(
                 saved.getStudentId(),
