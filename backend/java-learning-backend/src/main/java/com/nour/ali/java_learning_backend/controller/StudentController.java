@@ -4,7 +4,9 @@ import com.nour.ali.java_learning_backend.dto.StudentRequestDTO;
 import com.nour.ali.java_learning_backend.model.AdminRole;
 import com.nour.ali.java_learning_backend.model.Student;
 import com.nour.ali.java_learning_backend.service.JwtService;
+import com.nour.ali.java_learning_backend.service.StripeService;
 import com.nour.ali.java_learning_backend.service.StudentService;
+import com.stripe.exception.StripeException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -23,11 +25,13 @@ public class StudentController {
 
     private final StudentService studentService;
     private final JwtService jwtService;
+    private final StripeService stripeService; // ✅ Add this field
 
     @Autowired
-    public StudentController(StudentService studentService, JwtService jwtService) {
+    public StudentController(StudentService studentService, JwtService jwtService, StripeService stripeService) {
         this.studentService = studentService;
         this.jwtService = jwtService;
+        this.stripeService = stripeService; // ✅ Assign the service
     }
 
     @PostMapping("/add")
@@ -93,8 +97,37 @@ public class StudentController {
             ));
         }
 
-        // Check if student is unpaid
+        // Check if student is unpaid (but not expired)
         if (!student.isPaid()) {
+            // If they *were* paid before, check expiration
+            if (student.getPaymentDate() != null) {
+                Instant now = Instant.now();
+                Instant expiration = student.getPaymentDate().plus(365, ChronoUnit.DAYS);
+                if (now.isAfter(expiration)) {
+                    // Access expired — generate new link and deactivate
+                    try {
+                        student.setPaid(false);
+                        student.setActive(false);
+                        String newLink = stripeService.generateCheckoutUrl(student.getId());
+                        student.setPaymentLink(newLink);
+                        studentService.save(student);
+                        System.out.println("⚠️ Student's access expired, new payment link created: " + student.getId());
+                        return ResponseEntity.status(403).body(Map.of(
+                                "success", false,
+                                "error", "Access expired",
+                                "paymentLink", newLink
+                        ));
+                    } catch (StripeException e) {
+                        System.out.println("❌ Stripe error while generating new payment link: " + e.getMessage());
+                        return ResponseEntity.status(500).body(Map.of(
+                                "success", false,
+                                "error", "Failed to generate new payment link. Please try again later."
+                        ));
+                    }
+                }
+            }
+
+            // Student was never paid — just return existing link
             return ResponseEntity.status(403).body(Map.of(
                     "success", false,
                     "error", "Payment required",
@@ -102,23 +135,7 @@ public class StudentController {
             ));
         }
 
-        // Check if paid student has expired access
-        if (student.getPaymentDate() != null) {
-            Instant now = Instant.now();
-            Instant expiration = student.getPaymentDate().plus(365, ChronoUnit.DAYS);
-            if (now.isAfter(expiration)) {
-                student.setPaid(false);
-                student.setActive(false);
-                studentService.save(student);
-                System.out.println("⚠️ Student's access expired: " + student.getId());
-                return ResponseEntity.status(403).body(Map.of(
-                        "success", false,
-                        "error", "Access expired",
-                        "paymentLink", student.getPaymentLink()
-                ));
-            }
-        }
-
+        // Student is valid and paid
         String token = jwtService.generateToken(student.getId(), "STUDENT");
         System.out.println("✅ Student validated: " + student.getId());
         return ResponseEntity.ok(Map.of(
@@ -126,6 +143,8 @@ public class StudentController {
                 "token", token
         ));
     }
+
+
 
 
     @GetMapping("/whoami")
