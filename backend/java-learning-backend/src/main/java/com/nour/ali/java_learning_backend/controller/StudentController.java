@@ -97,7 +97,8 @@ public class StudentController {
         if (!student.isPaid()) {
             return ResponseEntity.status(403).body(Map.of(
                     "success", false,
-                    "error", "Payment required"
+                    "error", "Payment required",
+                    "paymentLink", student.getPaymentLink()
             ));
         }
 
@@ -112,7 +113,8 @@ public class StudentController {
                 System.out.println("⚠️ Student's access expired: " + student.getId());
                 return ResponseEntity.status(403).body(Map.of(
                         "success", false,
-                        "error", "Access expired"
+                        "error", "Access expired",
+                        "paymentLink", student.getPaymentLink()
                 ));
             }
         }
@@ -125,7 +127,7 @@ public class StudentController {
         ));
     }
 
-
+    
     @GetMapping("/whoami")
     public ResponseEntity<?> whoAmI(HttpServletRequest request) {
         String token = jwtService.extractToken(request);
