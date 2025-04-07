@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 
@@ -50,8 +52,6 @@ public class StudentController {
     }
 
 
-
-
     @DeleteMapping("/remove")
     public ResponseEntity<?> removeStudent(@RequestBody StudentRequestDTO dto, HttpServletRequest request) {
         try {
@@ -77,20 +77,54 @@ public class StudentController {
     public ResponseEntity<?> validateStudent(@RequestBody StudentRequestDTO dto) {
         Optional<Student> optionalStudent = studentService.findById(dto.getId());
         if (optionalStudent.isEmpty()) {
-            return ResponseEntity.status(401).body("{\"success\": false}");
+            return ResponseEntity.status(401).body(Map.of(
+                    "success", false,
+                    "error", "Student not found"
+            ));
         }
 
         Student student = optionalStudent.get();
-        boolean valid = studentService.validatePassword(dto.getPassword(), student.getPassword());
 
-        if (!valid || !student.getAdmin().equals(dto.getAdmin())) {
-            return ResponseEntity.status(401).body("{\"success\": false}");
+        if (!studentService.validatePassword(dto.getPassword(), student.getPassword())
+                || !student.getAdmin().equals(dto.getAdmin())) {
+            return ResponseEntity.status(401).body(Map.of(
+                    "success", false,
+                    "error", "Invalid credentials"
+            ));
+        }
+
+        // Check if student is unpaid
+        if (!student.isPaid()) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "success", false,
+                    "error", "Payment required"
+            ));
+        }
+
+        // Check if paid student has expired access
+        if (student.getPaymentDate() != null) {
+            Instant now = Instant.now();
+            Instant expiration = student.getPaymentDate().plus(365, ChronoUnit.DAYS);
+            if (now.isAfter(expiration)) {
+                student.setPaid(false);
+                student.setActive(false);
+                studentService.save(student);
+                System.out.println("⚠️ Student's access expired: " + student.getId());
+                return ResponseEntity.status(403).body(Map.of(
+                        "success", false,
+                        "error", "Access expired"
+                ));
+            }
         }
 
         String token = jwtService.generateToken(student.getId(), "STUDENT");
         System.out.println("✅ Student validated: " + student.getId());
-        return ResponseEntity.ok().body("{\"success\": true, \"token\": \"" + token + "\"}");
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "token", token
+        ));
     }
+
 
     @GetMapping("/whoami")
     public ResponseEntity<?> whoAmI(HttpServletRequest request) {
