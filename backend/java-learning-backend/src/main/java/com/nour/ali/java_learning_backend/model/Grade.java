@@ -4,17 +4,15 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@IdClass(GradeId.class)
 @Table(name = "grades")
 public class Grade {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     private String studentId;
-
-    @Id
     private String course;
-
-    @Id
     private String assignment;
 
     @Lob
@@ -30,6 +28,16 @@ public class Grade {
     private String admin;
 
     public Grade() {
+    }
+
+    // --- Getters & Setters ---
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getStudentId() {
@@ -91,7 +99,8 @@ public class Grade {
     @Override
     public String toString() {
         return "Grade{" +
-                "studentId='" + studentId + '\'' +
+                "id=" + id +
+                ", studentId='" + studentId + '\'' +
                 ", course='" + course + '\'' +
                 ", assignment='" + assignment + '\'' +
                 ", grade='" + grade + '\'' +
