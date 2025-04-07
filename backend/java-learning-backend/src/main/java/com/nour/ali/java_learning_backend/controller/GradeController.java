@@ -42,18 +42,25 @@ public class GradeController {
         return ResponseEntity.ok(grades);
     }
 
+    // ✅ Restricted to students only (based on role in token)
     @PostMapping
     public ResponseEntity<?> submitGrade(@RequestBody GradeRequestDTO dto, HttpServletRequest request) {
         String token = jwtService.extractToken(request);
-        String role = jwtService.extractRole(token);
 
+        if (token == null || token.isBlank()) {
+            System.out.println("❌ Missing or blank token");
+            return ResponseEntity.status(401).body("{\"message\": \"Unauthorized - Please include a valid token.\"}");
+        }
+
+        String role = jwtService.extractRole(token);
         if (role == null || !role.equalsIgnoreCase("STUDENT")) {
+            System.out.println("❌ Attempted grade submission with invalid or missing role: " + role);
             return ResponseEntity.status(403).body("{\"message\": \"Forbidden: Student access required\"}");
         }
 
         String studentIdFromToken = jwtService.extractUsername(token);
 
-        // 🔐 Replace the ID in the DTO with the one from the token
+        // Force the DTO to use the student ID from the token to avoid spoofing
         dto.setStudentId(studentIdFromToken);
 
         Optional<Student> optionalStudent = studentService.findById(studentIdFromToken);
@@ -73,5 +80,4 @@ public class GradeController {
         GradeResponseDTO response = gradeService.submitOrUpdateGrade(dto);
         return ResponseEntity.ok(response);
     }
-
 }
