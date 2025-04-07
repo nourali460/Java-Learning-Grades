@@ -17,11 +17,9 @@ public class Grade {
     @Id
     private String assignment;
 
-    @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
     private String grade;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String consoleOutput;
 
