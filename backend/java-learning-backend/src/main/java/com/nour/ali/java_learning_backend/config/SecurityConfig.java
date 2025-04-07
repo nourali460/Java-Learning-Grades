@@ -95,6 +95,8 @@ public class SecurityConfig {
 
                             SecurityContextHolder.getContext().setAuthentication(authentication);
                             System.out.println("✅ JWT authenticated and security context set for: " + username);
+                            System.out.println("🔐 SecurityContext now contains: " +
+                                    SecurityContextHolder.getContext().getAuthentication());
                         } else {
                             System.out.println("⚠️ JWT validation failed or already authenticated.");
                         }
