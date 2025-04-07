@@ -42,25 +42,21 @@ public class GradeController {
         return ResponseEntity.ok(grades);
     }
 
-    // ✅ Restricted to students only (based on role in token)
     @PostMapping
     public ResponseEntity<?> submitGrade(@RequestBody GradeRequestDTO dto, HttpServletRequest request) {
         String token = jwtService.extractToken(request);
         String role = jwtService.extractRole(token);
 
         if (role == null || !role.equalsIgnoreCase("STUDENT")) {
-            System.out.println("❌ Attempted grade submission with invalid or missing role: " + role);
             return ResponseEntity.status(403).body("{\"message\": \"Forbidden: Student access required\"}");
         }
 
-        String studentId = jwtService.extractUsername(token);
+        String studentIdFromToken = jwtService.extractUsername(token);
 
-        if (!studentId.equals(dto.getStudentId())) {
-            return ResponseEntity.status(403).body("{\"message\": \"Forbidden: You can only submit your own grades\"}");
-        }
+        // 🔐 Replace the ID in the DTO with the one from the token
+        dto.setStudentId(studentIdFromToken);
 
-        // 🔐 Check if student exists and is active
-        Optional<Student> optionalStudent = studentService.findById(studentId);
+        Optional<Student> optionalStudent = studentService.findById(studentIdFromToken);
         if (optionalStudent.isEmpty()) {
             return ResponseEntity.status(404).body("{\"message\": \"Student not found\"}");
         }
@@ -70,11 +66,12 @@ public class GradeController {
             return ResponseEntity.status(403).body("{\"error\": \"Student has not completed payment\"}");
         }
 
-        System.out.println("✅ Grade submitted by student: " + studentId +
+        System.out.println("✅ Grade submitted by student: " + studentIdFromToken +
                 " for course: " + dto.getCourse() +
                 ", assignment: " + dto.getAssignment());
 
         GradeResponseDTO response = gradeService.submitOrUpdateGrade(dto);
         return ResponseEntity.ok(response);
     }
+
 }
