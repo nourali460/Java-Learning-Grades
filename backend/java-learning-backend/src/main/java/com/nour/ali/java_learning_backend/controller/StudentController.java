@@ -127,7 +127,7 @@ public class StudentController {
         ));
     }
 
-    
+
     @GetMapping("/whoami")
     public ResponseEntity<?> whoAmI(HttpServletRequest request) {
         String token = jwtService.extractToken(request);
