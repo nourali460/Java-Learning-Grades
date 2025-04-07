@@ -4,17 +4,17 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "grades", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"studentId", "course", "assignment"})
-})
+@IdClass(GradeId.class)
+@Table(name = "grades")
 public class Grade {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     private String studentId;
+
+    @Id
     private String course;
+
+    @Id
     private String assignment;
 
     @Lob
@@ -33,14 +33,6 @@ public class Grade {
     }
 
     // --- Getters & Setters ---
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     public String getStudentId() {
         return studentId;
@@ -101,8 +93,7 @@ public class Grade {
     @Override
     public String toString() {
         return "Grade{" +
-                "id=" + id +
-                ", studentId='" + studentId + '\'' +
+                "studentId='" + studentId + '\'' +
                 ", course='" + course + '\'' +
                 ", assignment='" + assignment + '\'' +
                 ", grade='" + grade + '\'' +

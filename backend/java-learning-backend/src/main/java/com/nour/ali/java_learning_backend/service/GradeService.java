@@ -14,7 +14,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class GradeService {
@@ -43,7 +42,7 @@ public class GradeService {
 
         if (optionalGrade.isPresent()) {
             grade = optionalGrade.get();
-            System.out.println("\uD83D\uDCDD Updating existing grade ID: " + grade.getId());
+            System.out.println("📝 Updating grade for: " + grade.getStudentId() + " | " + grade.getCourse() + " | " + grade.getAssignment());
         } else {
             grade = new Grade();
             System.out.println("➕ Creating new grade");
@@ -55,7 +54,7 @@ public class GradeService {
         grade.setGrade(dto.getGrade());
         grade.setConsoleOutput(dto.getConsoleOutput());
         grade.setTimestamp(dto.getTimestamp() != null ? dto.getTimestamp() : Instant.now());
-        grade.setAdmin(dto.getAdmin()); // ✅ Optional admin
+        grade.setAdmin(dto.getAdmin()); // Optional admin
 
         Grade saved = gradeRepository.save(grade);
 
@@ -70,14 +69,8 @@ public class GradeService {
         );
     }
 
+    // ✅ Use custom query instead of in-memory filtering
     public List<Grade> findGrades(String studentId, String admin, String course, String assignment) {
-        return gradeRepository.findAll().stream()
-                .filter(g ->
-                        (studentId != null && g.getStudentId().equalsIgnoreCase(studentId)) &&
-                                (admin == null || (g.getAdmin() != null && g.getAdmin().equalsIgnoreCase(admin))) &&
-                                (course == null || g.getCourse().equalsIgnoreCase(course)) &&
-                                (assignment == null || g.getAssignment().equalsIgnoreCase(assignment))
-                )
-                .collect(Collectors.toList());
+        return gradeRepository.findByFilters(studentId, course, assignment, admin);
     }
 }
