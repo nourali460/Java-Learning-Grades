@@ -1,54 +1,26 @@
-// controller/StripeController.java
 package com.nour.ali.java_learning_backend.controller;
 
+import com.nour.ali.java_learning_backend.service.StripeService;
 import com.stripe.exception.StripeException;
-import com.stripe.model.checkout.Session;
-import com.stripe.param.checkout.SessionCreateParams;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/stripe")
 public class StripeController {
 
-    @Value("${stripe.checkout.successUrl}")
-    private String successUrl;
+    private final StripeService stripeService;
 
-    @Value("${stripe.checkout.cancelUrl}")
-    private String cancelUrl;
+    @Autowired
+    public StripeController(StripeService stripeService) {
+        this.stripeService = stripeService;
+    }
 
     @PostMapping("/create-checkout-session")
     public Map<String, Object> createCheckoutSession(@RequestParam String studentId) throws StripeException {
-        SessionCreateParams params = SessionCreateParams.builder()
-                .setMode(SessionCreateParams.Mode.PAYMENT)
-                .setSuccessUrl(successUrl + "?studentId=" + studentId)
-                .setCancelUrl(cancelUrl)
-                .addLineItem(
-                        SessionCreateParams.LineItem.builder()
-                                .setQuantity(1L)
-                                .setPriceData(
-                                        SessionCreateParams.LineItem.PriceData.builder()
-                                                .setCurrency("usd")
-                                                .setUnitAmount(3500L) // $35.00 in cents
-                                                .setProductData(
-                                                        SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                                                .setName("Course Access Fee")
-                                                                .setDescription("One-time payment for 12 months of course access")
-                                                                .build()
-                                                )
-                                                .build()
-                                )
-                                .build()
-                )
-                .putMetadata("studentId", studentId) // optional, useful for webhooks
-                .build();
-
-        Session session = Session.create(params);
-        Map<String, Object> responseData = new HashMap<>();
-        responseData.put("checkoutUrl", session.getUrl());
-        return responseData;
+        String checkoutUrl = stripeService.generateCheckoutUrl(studentId);
+        return Map.of("checkoutUrl", checkoutUrl);
     }
 }

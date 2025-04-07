@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+
 import java.time.Instant;
 import java.util.Optional;
 
@@ -18,11 +19,15 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final StripeService stripeService; // ✅ add this line
 
     @Autowired
-    public StudentService(StudentRepository studentRepository, PasswordEncoder passwordEncoder) {
+    public StudentService(StudentRepository studentRepository,
+                          PasswordEncoder passwordEncoder,
+                          StripeService stripeService) { // ✅ inject here
         this.studentRepository = studentRepository;
         this.passwordEncoder = passwordEncoder;
+        this.stripeService = stripeService;
     }
 
     public Student addOrUpdateStudent(StudentRequestDTO dto) {
@@ -53,8 +58,15 @@ public class StudentService {
             student.setCreatedAt(Instant.now());
             student.setPaid(false);
             student.setActive(false);
-            student.setPaymentLink("");
             student.setPaymentDate(null);
+
+            // 🔗 Generate payment link
+            try {
+                String checkoutUrl = stripeService.generateCheckoutUrl(dto.getId());
+                student.setPaymentLink(checkoutUrl);
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to generate payment link");
+            }
         }
 
         return studentRepository.save(student);
