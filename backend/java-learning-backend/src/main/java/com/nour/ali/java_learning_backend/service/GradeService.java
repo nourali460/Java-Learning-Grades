@@ -28,12 +28,26 @@ public class GradeService {
     }
 
     public GradeResponseDTO submitOrUpdateGrade(GradeRequestDTO dto) {
+        System.out.println("🚀 submitOrUpdateGrade triggered with data:");
+        System.out.println("   ➤ Student ID: " + dto.getStudentId());
+        System.out.println("   ➤ Course: " + dto.getCourse());
+        System.out.println("   ➤ Assignment: " + dto.getAssignment());
+        System.out.println("   ➤ Grade: " + dto.getGrade());
+        System.out.println("   ➤ Admin: " + dto.getAdmin());
+        System.out.println("   ➤ Timestamp: " + dto.getTimestamp());
+
         Student student = studentRepository.findById(dto.getStudentId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+                .orElseThrow(() -> {
+                    System.out.println("❌ Student not found: " + dto.getStudentId());
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found");
+                });
 
         if (!student.isActive() || !student.isPaid()) {
+            System.out.println("❌ Student not active/paid. Active: " + student.isActive() + ", Paid: " + student.isPaid());
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Student has not completed payment");
         }
+
+        System.out.println("✅ Student is active and paid.");
 
         Optional<Grade> optionalGrade = gradeRepository
                 .findByStudentIdAndCourseAndAssignment(dto.getStudentId(), dto.getCourse(), dto.getAssignment());
@@ -42,21 +56,24 @@ public class GradeService {
 
         if (optionalGrade.isPresent()) {
             grade = optionalGrade.get();
-            System.out.println("📝 Updating grade for: " + grade.getStudentId() + " | " + grade.getCourse() + " | " + grade.getAssignment());
+            System.out.println("📝 Found existing grade. Will update: ID (composite) = " +
+                    grade.getStudentId() + " | " + grade.getCourse() + " | " + grade.getAssignment());
         } else {
             grade = new Grade();
-            System.out.println("➕ Creating new grade");
+            System.out.println("➕ No existing grade found. Will create new.");
         }
 
+        // Apply updates
         grade.setStudentId(dto.getStudentId());
         grade.setCourse(dto.getCourse());
         grade.setAssignment(dto.getAssignment());
         grade.setGrade(dto.getGrade());
         grade.setConsoleOutput(dto.getConsoleOutput());
         grade.setTimestamp(dto.getTimestamp() != null ? dto.getTimestamp() : Instant.now());
-        grade.setAdmin(dto.getAdmin()); // Optional admin
+        grade.setAdmin(dto.getAdmin());
 
         Grade saved = gradeRepository.save(grade);
+        System.out.println("✅ Grade saved successfully to DB!");
 
         return new GradeResponseDTO(
                 saved.getStudentId(),
@@ -68,6 +85,7 @@ public class GradeService {
                 saved.getAdmin()
         );
     }
+
 
     // ✅ Use custom query instead of in-memory filtering
     public List<Grade> findGrades(String studentId, String admin, String course, String assignment) {
