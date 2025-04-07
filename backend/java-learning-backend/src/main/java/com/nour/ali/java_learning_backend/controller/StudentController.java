@@ -81,9 +81,11 @@ public class StudentController {
     public ResponseEntity<?> validateStudent(@RequestBody StudentRequestDTO dto) {
         Optional<Student> optionalStudent = studentService.findById(dto.getId());
         if (optionalStudent.isEmpty()) {
+            String errorMessage = "Student not found";
+            System.out.println("🔁 Returning error: " + errorMessage);
             return ResponseEntity.status(401).body(Map.of(
                     "success", false,
-                    "error", "Student not found"
+                    "error", errorMessage
             ));
         }
 
@@ -91,9 +93,11 @@ public class StudentController {
 
         if (!studentService.validatePassword(dto.getPassword(), student.getPassword())
                 || !student.getAdmin().equals(dto.getAdmin())) {
+            String errorMessage = "Invalid credentials";
+            System.out.println("🔁 Returning error: " + errorMessage);
             return ResponseEntity.status(401).body(Map.of(
                     "success", false,
-                    "error", "Invalid credentials"
+                    "error", errorMessage
             ));
         }
 
@@ -104,33 +108,38 @@ public class StudentController {
                 Instant now = Instant.now();
                 Instant expiration = student.getPaymentDate().plus(365, ChronoUnit.DAYS);
                 if (now.isAfter(expiration)) {
-                    // Access expired — generate new link and deactivate
                     try {
                         student.setPaid(false);
                         student.setActive(false);
                         String newLink = stripeService.generateCheckoutUrl(student.getId());
                         student.setPaymentLink(newLink);
                         studentService.save(student);
+
+                        String errorMessage = "Access expired";
                         System.out.println("⚠️ Student's access expired, new payment link created: " + student.getId());
+                        System.out.println("🔁 Returning error: " + errorMessage + " with link: " + newLink);
                         return ResponseEntity.status(403).body(Map.of(
                                 "success", false,
-                                "error", "Access expired",
+                                "error", errorMessage,
                                 "paymentLink", newLink
                         ));
                     } catch (StripeException e) {
+                        String errorMessage = "Failed to generate new payment link. Please try again later.";
                         System.out.println("❌ Stripe error while generating new payment link: " + e.getMessage());
+                        System.out.println("🔁 Returning error: " + errorMessage);
                         return ResponseEntity.status(500).body(Map.of(
                                 "success", false,
-                                "error", "Failed to generate new payment link. Please try again later."
+                                "error", errorMessage
                         ));
                     }
                 }
             }
 
-            // Student was never paid — just return existing link
+            String errorMessage = "Payment required";
+            System.out.println("🔁 Returning error: " + errorMessage + " with existing link: " + student.getPaymentLink());
             return ResponseEntity.status(403).body(Map.of(
                     "success", false,
-                    "error", "Payment required",
+                    "error", errorMessage,
                     "paymentLink", student.getPaymentLink()
             ));
         }
@@ -143,6 +152,7 @@ public class StudentController {
                 "token", token
         ));
     }
+
 
 
 
