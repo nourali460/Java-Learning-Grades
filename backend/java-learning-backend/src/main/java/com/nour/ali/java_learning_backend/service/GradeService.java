@@ -42,23 +42,20 @@ public class GradeService {
         Grade grade;
 
         if (optionalGrade.isPresent()) {
-            // 🔁 Updating existing grade
             grade = optionalGrade.get();
             System.out.println("📝 Updating existing grade ID: " + grade.getId());
         } else {
-            // ➕ Creating new grade
             grade = new Grade();
             System.out.println("➕ Creating new grade");
         }
 
-        // ✍️ Set/update fields
         grade.setStudentId(dto.getStudentId());
         grade.setCourse(dto.getCourse());
         grade.setAssignment(dto.getAssignment());
         grade.setGrade(dto.getGrade());
         grade.setConsoleOutput(dto.getConsoleOutput());
         grade.setTimestamp(dto.getTimestamp() != null ? dto.getTimestamp() : Instant.now());
-        grade.setAdmin(dto.getAdmin());
+        grade.setAdmin(dto.getAdmin()); // ✅ Optional admin
 
         Grade saved = gradeRepository.save(grade);
 
@@ -73,4 +70,14 @@ public class GradeService {
         );
     }
 
+    public List<Grade> findGrades(String studentId, String admin, String course, String assignment) {
+        return gradeRepository.findAll().stream()
+                .filter(g ->
+                        (studentId == null || g.getStudentId().equals(studentId)) &&
+                                (admin == null || (g.getAdmin() != null && g.getAdmin().equals(admin))) &&
+                                (course == null || g.getCourse().equals(course)) &&
+                                (assignment == null || g.getAssignment().equals(assignment))
+                )
+                .collect(Collectors.toList());
+    }
 }

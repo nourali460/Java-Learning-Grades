@@ -36,7 +36,7 @@ public class GradeController {
             @RequestParam(required = false) String studentId,
             @RequestParam(required = false) String course,
             @RequestParam(required = false) String assignment,
-            @RequestParam(required = false) String admin
+            @RequestParam(required = false) String admin // ✅ Optional admin filter
     ) {
         List<Grade> grades = gradeService.findGrades(studentId, admin, course, assignment);
         return ResponseEntity.ok(grades);
@@ -59,9 +59,7 @@ public class GradeController {
         }
 
         String studentIdFromToken = jwtService.extractUsername(token);
-
-        // Force the DTO to use the student ID from the token to avoid spoofing
-        dto.setStudentId(studentIdFromToken);
+        dto.setStudentId(studentIdFromToken); // prevent spoofing
 
         Optional<Student> optionalStudent = studentService.findById(studentIdFromToken);
         if (optionalStudent.isEmpty()) {
