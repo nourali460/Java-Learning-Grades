@@ -23,7 +23,7 @@ public class Student {
     @Column(nullable = false)
     private boolean paid;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String paymentLink;
 
     @Column(nullable = false)

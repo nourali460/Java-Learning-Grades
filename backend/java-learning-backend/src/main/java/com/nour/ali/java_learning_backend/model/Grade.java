@@ -17,10 +17,12 @@ public class Grade {
     @Id
     private String assignment;
 
-    @Column(nullable = false)
+    @Lob
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String grade;
 
     @Lob
+    @Column(columnDefinition = "TEXT")
     private String consoleOutput;
 
     private Instant timestamp;
