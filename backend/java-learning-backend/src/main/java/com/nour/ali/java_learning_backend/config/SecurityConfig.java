@@ -69,45 +69,47 @@ public class SecurityConfig {
             protected void doFilterInternal(HttpServletRequest request,
                                             HttpServletResponse response,
                                             FilterChain filterChain) throws ServletException, IOException {
+                String method = request.getMethod();
+                String uri = request.getRequestURI();
+                System.out.println("➡️ Incoming request: " + method + " " + uri);
+
                 String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-                System.out.println("🔍 Incoming request to: " + request.getMethod() + " " + request.getRequestURI());
 
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
                     String token = authHeader.substring(7);
-                    System.out.println("🔐 Authorization header found. Token: " + token);
+                    System.out.println("🔐 Token received: " + token);
 
                     try {
                         String username = jwtService.extractUsername(token);
                         String role = jwtService.extractRole(token);
+                        boolean valid = jwtService.validateToken(token);
 
-                        System.out.println("🔍 Extracted Username: " + username + " | Role: " + role);
+                        System.out.println("🧠 Decoded Username: " + username);
+                        System.out.println("🎭 Decoded Role: " + role);
+                        System.out.println("✅ Is token valid? " + valid);
 
                         if (username != null &&
-                                jwtService.validateToken(token) &&
+                                valid &&
                                 SecurityContextHolder.getContext().getAuthentication() == null) {
 
                             UsernamePasswordAuthenticationToken authentication =
                                     new UsernamePasswordAuthenticationToken(
-                                            username,
-                                            null,
-                                            Collections.emptyList()
-                                    );
+                                            username, null, Collections.emptyList());
 
                             SecurityContextHolder.getContext().setAuthentication(authentication);
-                            System.out.println("✅ JWT authenticated and security context set for: " + username);
-                            System.out.println("🔐 SecurityContext now contains: " +
-                                    SecurityContextHolder.getContext().getAuthentication());
+                            System.out.println("🟢 SecurityContext AUTHENTICATED as: " + username);
                         } else {
-                            System.out.println("⚠️ JWT validation failed or already authenticated.");
+                            System.out.println("⚠️ Token invalid or user already authenticated.");
                         }
 
                     } catch (JwtException e) {
-                        System.out.println("❌ JWT exception: " + e.getMessage());
+                        System.out.println("❌ JWT Exception: " + e.getMessage());
                     } catch (Exception e) {
-                        System.out.println("❌ Unexpected exception: " + e.getMessage());
+                        System.out.println("❌ Unexpected Exception: " + e.getMessage());
                     }
+
                 } else {
-                    System.out.println("❗ No valid Authorization header found.");
+                    System.out.println("❗ Missing or invalid Authorization header.");
                 }
 
                 filterChain.doFilter(request, response);
