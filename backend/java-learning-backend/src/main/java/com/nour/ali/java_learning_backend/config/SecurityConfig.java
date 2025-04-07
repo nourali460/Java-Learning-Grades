@@ -73,6 +73,11 @@ public class SecurityConfig {
                 String uri = request.getRequestURI();
                 System.out.println("➡️ Incoming request: " + method + " " + uri);
 
+                // Print all headers for debugging
+                System.out.println("📦 Headers:");
+                Collections.list(request.getHeaderNames()).forEach(name ->
+                        System.out.println("   → " + name + ": " + request.getHeader(name)));
+
                 String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -84,8 +89,8 @@ public class SecurityConfig {
                         String role = jwtService.extractRole(token);
                         boolean valid = jwtService.validateToken(token);
 
-                        System.out.println("🧠 Decoded Username: " + username);
-                        System.out.println("🎭 Decoded Role: " + role);
+                        System.out.println("🧠 Username: " + username);
+                        System.out.println("🎭 Role: " + role);
                         System.out.println("✅ Is token valid? " + valid);
 
                         if (username != null &&
@@ -97,19 +102,24 @@ public class SecurityConfig {
                                             username, null, Collections.emptyList());
 
                             SecurityContextHolder.getContext().setAuthentication(authentication);
-                            System.out.println("🟢 SecurityContext AUTHENTICATED as: " + username);
+                            System.out.println("🟢 Authentication successful for: " + username);
                         } else {
-                            System.out.println("⚠️ Token invalid or user already authenticated.");
+                            System.out.println("⚠️ Token invalid or already authenticated.");
                         }
 
                     } catch (JwtException e) {
-                        System.out.println("❌ JWT Exception: " + e.getMessage());
+                        System.out.println("❌ JWT error: " + e.getMessage());
+                        e.printStackTrace();
                     } catch (Exception e) {
-                        System.out.println("❌ Unexpected Exception: " + e.getMessage());
+                        System.out.println("❌ Unexpected error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                        e.printStackTrace();
                     }
 
                 } else {
-                    System.out.println("❗ Missing or invalid Authorization header.");
+                    System.out.println("❗ No Authorization header or malformed header.");
+                    if (authHeader != null) {
+                        System.out.println("   ⛔ Found header: " + authHeader);
+                    }
                 }
 
                 filterChain.doFilter(request, response);
