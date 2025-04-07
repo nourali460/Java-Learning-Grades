@@ -75,10 +75,11 @@ public class SecurityConfig {
                     String token = authHeader.substring(7);
 
                     try {
-                        if (jwtService.validateToken(token)) {
-                            String username = jwtService.extractUsername(token);
+                        String username = jwtService.extractUsername(token);
 
-                            System.out.println("✅ Auth user: " + username);
+                        if (username != null &&
+                                jwtService.validateToken(token) &&
+                                SecurityContextHolder.getContext().getAuthentication() == null) {
 
                             UsernamePasswordAuthenticationToken authentication =
                                     new UsernamePasswordAuthenticationToken(
@@ -88,9 +89,11 @@ public class SecurityConfig {
                                     );
 
                             SecurityContextHolder.getContext().setAuthentication(authentication);
+                            System.out.println("✅ JWT authenticated: " + username);
                         }
+
                     } catch (JwtException e) {
-                        System.out.println("❌ Invalid token: " + e.getMessage());
+                        System.out.println("❌ Invalid JWT: " + e.getMessage());
                     }
                 }
 
