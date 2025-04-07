@@ -43,7 +43,7 @@ public class GradeService {
 
         if (optionalGrade.isPresent()) {
             grade = optionalGrade.get();
-            System.out.println("📝 Updating existing grade ID: " + grade.getId());
+            System.out.println("\uD83D\uDCDD Updating existing grade ID: " + grade.getId());
         } else {
             grade = new Grade();
             System.out.println("➕ Creating new grade");
@@ -73,10 +73,10 @@ public class GradeService {
     public List<Grade> findGrades(String studentId, String admin, String course, String assignment) {
         return gradeRepository.findAll().stream()
                 .filter(g ->
-                        (studentId == null || g.getStudentId().equals(studentId)) &&
-                                (admin == null || (g.getAdmin() != null && g.getAdmin().equals(admin))) &&
-                                (course == null || g.getCourse().equals(course)) &&
-                                (assignment == null || g.getAssignment().equals(assignment))
+                        (studentId != null && g.getStudentId().equalsIgnoreCase(studentId)) &&
+                                (admin == null || (g.getAdmin() != null && g.getAdmin().equalsIgnoreCase(admin))) &&
+                                (course == null || g.getCourse().equalsIgnoreCase(course)) &&
+                                (assignment == null || g.getAssignment().equalsIgnoreCase(assignment))
                 )
                 .collect(Collectors.toList());
     }

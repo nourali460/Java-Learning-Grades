@@ -9,8 +9,6 @@ import java.util.Optional;
 @Repository
 public interface GradeRepository extends JpaRepository<Grade, Long> {
 
-    // Optional: Add this if you want to prevent duplicate submissions manually
-    boolean existsByStudentIdAndCourseAndAssignment(String studentId, String course, String assignment);
     Optional<Grade> findByStudentIdAndCourseAndAssignment(String studentId, String course, String assignment);
 
 }
