@@ -14,7 +14,7 @@ echo 🚀 Pushing backend to Heroku...
 cd backend/java-learning-backend
 git add .
 git commit -m "%MESSAGE%" || echo ⚠️ No new changes to commit.
-git push heroku main
+git push heroku master
 
 echo ✅ All done!
 pause
