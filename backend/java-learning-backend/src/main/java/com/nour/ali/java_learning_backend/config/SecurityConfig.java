@@ -51,7 +51,11 @@ public class SecurityConfig {
                                 "/roles",
                                 "/admins",
                                 "/admins/contains",
-                                "/api/stripe/**"
+                                "/api/stripe/**",
+                                "/",
+                                "/index.html",
+                                "/assets/**",
+                                "/static/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/grades").permitAll()
                         .requestMatchers(HttpMethod.POST, "/grades").authenticated()
