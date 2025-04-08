@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react';
 
-export default function GradeTable({ token }) {
+export default function GradeTable() {
   const [grades, setGrades] = useState([]);
 
   useEffect(() => {
+    const token = localStorage.getItem("jwt"); // ✅ pull from localStorage
+    if (!token) return;
+
     fetch("/api/grades", {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     })
       .then(res => res.json())
       .then(data => setGrades(data));
-  }, [token]);
+  }, []);
 
   return (
     <div className="p-6">
