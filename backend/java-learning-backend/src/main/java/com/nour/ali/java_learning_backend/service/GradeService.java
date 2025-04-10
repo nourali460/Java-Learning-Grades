@@ -34,6 +34,7 @@ public class GradeService {
         System.out.println("   ➤ Assignment: " + dto.getAssignment());
         System.out.println("   ➤ Grade: " + dto.getGrade());
         System.out.println("   ➤ Admin: " + dto.getAdmin());
+        System.out.println("   ➤ Semester: " + dto.getSemesterId());
         System.out.println("   ➤ Timestamp: " + dto.getTimestamp());
 
         Student student = studentRepository.findById(dto.getStudentId())
@@ -50,14 +51,14 @@ public class GradeService {
         System.out.println("✅ Student is active and paid.");
 
         Optional<Grade> optionalGrade = gradeRepository
-                .findByStudentIdAndCourseAndAssignment(dto.getStudentId(), dto.getCourse(), dto.getAssignment());
+                .findByStudentIdAndCourseAndAssignmentAndSemesterId(dto.getStudentId(), dto.getCourse(), dto.getAssignment(), dto.getSemesterId());
 
         Grade grade;
 
         if (optionalGrade.isPresent()) {
             grade = optionalGrade.get();
             System.out.println("📝 Found existing grade. Will update: ID (composite) = " +
-                    grade.getStudentId() + " | " + grade.getCourse() + " | " + grade.getAssignment());
+                    grade.getStudentId() + " | " + grade.getCourse() + " | " + grade.getAssignment() + " | " + grade.getSemesterId());
         } else {
             grade = new Grade();
             System.out.println("➕ No existing grade found. Will create new.");
@@ -71,7 +72,7 @@ public class GradeService {
         grade.setConsoleOutput(dto.getConsoleOutput());
         grade.setTimestamp(dto.getTimestamp() != null ? dto.getTimestamp() : Instant.now());
         grade.setAdmin(dto.getAdmin());
-        grade.setSemesterId(dto.getSemesterId()); // ✅ new field
+        grade.setSemesterId(dto.getSemesterId());
 
         Grade saved = gradeRepository.save(grade);
         System.out.println("✅ Grade saved successfully to DB!");
@@ -84,11 +85,10 @@ public class GradeService {
                 saved.getConsoleOutput(),
                 saved.getTimestamp(),
                 saved.getAdmin(),
-                saved.getSemesterId() // ✅ include semesterId
+                saved.getSemesterId()
         );
     }
 
-    // ✅ Added semesterId to filtering
     public List<Grade> findGrades(String studentId, String admin, String course, String assignment, String semesterId) {
         return gradeRepository.findByFilters(studentId, course, assignment, admin, semesterId);
     }

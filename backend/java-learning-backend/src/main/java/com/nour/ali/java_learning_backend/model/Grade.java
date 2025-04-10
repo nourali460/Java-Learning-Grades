@@ -17,6 +17,9 @@ public class Grade {
     @Id
     private String assignment;
 
+    @Id
+    private String semesterId;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String grade;
 
@@ -26,9 +29,6 @@ public class Grade {
     private Instant timestamp;
 
     private String admin;
-
-    @Column
-    private String semesterId; // ✅ new field
 
     public Grade() {
     }

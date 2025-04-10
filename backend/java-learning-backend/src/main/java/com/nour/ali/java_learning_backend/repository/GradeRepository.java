@@ -13,7 +13,7 @@ import java.util.Optional;
 @Repository
 public interface GradeRepository extends JpaRepository<Grade, GradeId> {
 
-    Optional<Grade> findByStudentIdAndCourseAndAssignment(String studentId, String course, String assignment);
+    Optional<Grade> findByStudentIdAndCourseAndAssignmentAndSemesterId(String studentId, String course, String assignment, String semesterId);
 
     @Query("SELECT g FROM Grade g WHERE " +
             "(:studentId IS NULL OR g.studentId = :studentId) AND " +
