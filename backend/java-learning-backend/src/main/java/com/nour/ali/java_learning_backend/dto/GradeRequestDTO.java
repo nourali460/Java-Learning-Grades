@@ -11,12 +11,13 @@ public class GradeRequestDTO {
     private String consoleOutput;
     private Instant timestamp;
     private String admin;
+    private String semesterId; // ✅ NEW FIELD
 
     public GradeRequestDTO() {
     }
 
     public GradeRequestDTO(String studentId, String course, String assignment, String grade,
-                           String consoleOutput, Instant timestamp, String admin) {
+                           String consoleOutput, Instant timestamp, String admin, String semesterId) {
         this.studentId = studentId;
         this.course = course;
         this.assignment = assignment;
@@ -24,6 +25,7 @@ public class GradeRequestDTO {
         this.consoleOutput = consoleOutput;
         this.timestamp = timestamp;
         this.admin = admin;
+        this.semesterId = semesterId;
     }
 
     public String getStudentId() {
@@ -80,5 +82,13 @@ public class GradeRequestDTO {
 
     public void setAdmin(String admin) {
         this.admin = admin;
+    }
+
+    public String getSemesterId() {
+        return semesterId;
+    }
+
+    public void setSemesterId(String semesterId) {
+        this.semesterId = semesterId;
     }
 }

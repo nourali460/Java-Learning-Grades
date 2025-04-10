@@ -1,4 +1,3 @@
-// File: service/StudentService.java
 package com.nour.ali.java_learning_backend.service;
 
 import com.nour.ali.java_learning_backend.dto.StudentRequestDTO;
@@ -10,7 +9,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-
 import java.time.Instant;
 import java.util.Optional;
 
@@ -19,12 +17,12 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
-    private final StripeService stripeService; // ✅ add this line
+    private final StripeService stripeService;
 
     @Autowired
     public StudentService(StudentRepository studentRepository,
                           PasswordEncoder passwordEncoder,
-                          StripeService stripeService) { // ✅ inject here
+                          StripeService stripeService) {
         this.studentRepository = studentRepository;
         this.passwordEncoder = passwordEncoder;
         this.stripeService = stripeService;
@@ -52,15 +50,14 @@ public class StudentService {
         student.setEmail(dto.getEmail());
         student.setPassword(passwordEncoder.encode(dto.getPassword()));
         student.setAdmin(dto.getAdmin());
+        student.setSemesterId(dto.getSemesterId()); // ✅ Set semester
 
-        // Only set defaults if this is a new student
         if (existingById.isEmpty()) {
             student.setCreatedAt(Instant.now());
             student.setPaid(false);
             student.setActive(false);
             student.setPaymentDate(null);
 
-            // 🔗 Generate payment link
             try {
                 String checkoutUrl = stripeService.generateCheckoutUrl(dto.getId());
                 student.setPaymentLink(checkoutUrl);
@@ -71,8 +68,6 @@ public class StudentService {
 
         return studentRepository.save(student);
     }
-
-
 
     public boolean removeStudent(String id) {
         if (!studentRepository.existsById(id)) {

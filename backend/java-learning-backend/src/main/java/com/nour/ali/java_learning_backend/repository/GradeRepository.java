@@ -19,11 +19,14 @@ public interface GradeRepository extends JpaRepository<Grade, GradeId> {
             "(:studentId IS NULL OR g.studentId = :studentId) AND " +
             "(:course IS NULL OR g.course = :course) AND " +
             "(:assignment IS NULL OR g.assignment = :assignment) AND " +
-            "(:admin IS NULL OR g.admin = :admin)")
+            "(:admin IS NULL OR g.admin = :admin) AND " +
+            "(:semesterId IS NULL OR g.semesterId = :semesterId)")
     List<Grade> findByFilters(
             @Param("studentId") String studentId,
             @Param("course") String course,
             @Param("assignment") String assignment,
-            @Param("admin") String admin
+            @Param("admin") String admin,
+            @Param("semesterId") String semesterId
     );
 }
+

@@ -71,6 +71,7 @@ public class GradeService {
         grade.setConsoleOutput(dto.getConsoleOutput());
         grade.setTimestamp(dto.getTimestamp() != null ? dto.getTimestamp() : Instant.now());
         grade.setAdmin(dto.getAdmin());
+        grade.setSemesterId(dto.getSemesterId()); // ✅ new field
 
         Grade saved = gradeRepository.save(grade);
         System.out.println("✅ Grade saved successfully to DB!");
@@ -82,13 +83,13 @@ public class GradeService {
                 saved.getGrade(),
                 saved.getConsoleOutput(),
                 saved.getTimestamp(),
-                saved.getAdmin()
+                saved.getAdmin(),
+                saved.getSemesterId() // ✅ include semesterId
         );
     }
 
-
-    // ✅ Use custom query instead of in-memory filtering
-    public List<Grade> findGrades(String studentId, String admin, String course, String assignment) {
-        return gradeRepository.findByFilters(studentId, course, assignment, admin);
+    // ✅ Added semesterId to filtering
+    public List<Grade> findGrades(String studentId, String admin, String course, String assignment, String semesterId) {
+        return gradeRepository.findByFilters(studentId, course, assignment, admin, semesterId);
     }
 }

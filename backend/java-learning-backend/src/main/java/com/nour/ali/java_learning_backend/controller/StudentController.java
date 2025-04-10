@@ -43,8 +43,12 @@ public class StudentController {
                 return ResponseEntity.status(403).body("{\"message\": \"Forbidden: Admin access required\"}");
             }
 
+            if (dto.getSemesterId() == null || dto.getSemesterId().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("{\"message\": \"Semester ID is required\"}");
+            }
+
             studentService.addOrUpdateStudent(dto);
-            System.out.println("✅ Student added/updated: " + dto.getId());
+            System.out.println("✅ Student added/updated: " + dto.getId() + " (" + dto.getSemesterId() + ")");
             return ResponseEntity.ok().body("{\"message\": \"Student added/updated\"}");
 
         } catch (ResponseStatusException e) {
@@ -54,6 +58,7 @@ public class StudentController {
             return ResponseEntity.status(500).body("{\"message\": \"Unexpected error occurred\"}");
         }
     }
+
 
 
     @DeleteMapping("/remove")

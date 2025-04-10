@@ -27,6 +27,9 @@ public class Grade {
 
     private String admin;
 
+    @Column
+    private String semesterId; // ✅ new field
+
     public Grade() {
     }
 
@@ -88,6 +91,14 @@ public class Grade {
         this.admin = admin;
     }
 
+    public String getSemesterId() {
+        return semesterId;
+    }
+
+    public void setSemesterId(String semesterId) {
+        this.semesterId = semesterId;
+    }
+
     @Override
     public String toString() {
         return "Grade{" +
@@ -97,6 +108,7 @@ public class Grade {
                 ", grade='" + grade + '\'' +
                 ", timestamp=" + timestamp +
                 ", admin='" + admin + '\'' +
+                ", semesterId='" + semesterId + '\'' +
                 '}';
     }
 }

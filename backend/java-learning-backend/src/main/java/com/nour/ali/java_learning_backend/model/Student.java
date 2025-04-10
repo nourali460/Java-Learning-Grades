@@ -35,7 +35,18 @@ public class Student {
     @Column
     private Instant paymentDate;
 
+    @Column(nullable = true)
+    private String semesterId;
+
     public Student() {}
+
+    public String getSemesterId() {
+        return semesterId;
+    }
+
+    public void setSemesterId(String semesterId) {
+        this.semesterId = semesterId;
+    }
 
     public String getId() {
         return id;
@@ -113,12 +124,15 @@ public class Student {
     public String toString() {
         return "Student{" +
                 "id='" + id + '\'' +
+                ", password='" + password + '\'' +
                 ", email='" + email + '\'' +
                 ", admin='" + admin + '\'' +
                 ", paid=" + paid +
+                ", paymentLink='" + paymentLink + '\'' +
                 ", active=" + active +
                 ", createdAt=" + createdAt +
                 ", paymentDate=" + paymentDate +
+                ", semesterId='" + semesterId + '\'' +
                 '}';
     }
 }

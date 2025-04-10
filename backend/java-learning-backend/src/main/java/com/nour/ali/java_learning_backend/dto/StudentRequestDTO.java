@@ -13,13 +13,14 @@ public class StudentRequestDTO {
     private boolean active;
     private Instant createdAt;
     private Instant paymentDate;
+    private String semesterId; // ✅ New field
 
     public StudentRequestDTO() {
     }
 
     public StudentRequestDTO(String id, String password, String email, String admin,
                              boolean paid, String paymentLink, boolean active,
-                             Instant createdAt, Instant paymentDate) {
+                             Instant createdAt, Instant paymentDate, String semesterId) {
         this.id = id;
         this.password = password;
         this.email = email;
@@ -29,6 +30,7 @@ public class StudentRequestDTO {
         this.active = active;
         this.createdAt = createdAt;
         this.paymentDate = paymentDate;
+        this.semesterId = semesterId;
     }
 
     public String getId() {
@@ -101,5 +103,13 @@ public class StudentRequestDTO {
 
     public void setPaymentDate(Instant paymentDate) {
         this.paymentDate = paymentDate;
+    }
+
+    public String getSemesterId() {
+        return semesterId;
+    }
+
+    public void setSemesterId(String semesterId) {
+        this.semesterId = semesterId;
     }
 }

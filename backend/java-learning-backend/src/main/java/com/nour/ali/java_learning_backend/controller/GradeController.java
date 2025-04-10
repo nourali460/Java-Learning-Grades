@@ -30,17 +30,18 @@ public class GradeController {
         this.studentService = studentService;
     }
 
-    // ✅ Public access — no login required
     @GetMapping
     public ResponseEntity<List<Grade>> getGrades(
             @RequestParam(required = false) String studentId,
             @RequestParam(required = false) String course,
             @RequestParam(required = false) String assignment,
-            @RequestParam(required = false) String admin // ✅ Optional admin filter
+            @RequestParam(required = false) String admin,
+            @RequestParam(required = false) String semesterId // ✅ New filter
     ) {
-        List<Grade> grades = gradeService.findGrades(studentId, admin, course, assignment);
+        List<Grade> grades = gradeService.findGrades(studentId, admin, course, assignment, semesterId);
         return ResponseEntity.ok(grades);
     }
+
 
     // ✅ Restricted to students only (based on role in token)
     @PostMapping
