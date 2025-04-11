@@ -28,6 +28,10 @@ public class AdminService {
         this.studentRepository = studentRepository;
     }
 
+    public List<Student> getStudentsByAdminCourseSemester(String admin, String course, String semesterId) {
+        return studentRepository.findAllByAdminAndCourseAndSemester(admin, course, semesterId);
+    }
+
     public Optional<Admin> validateAdmin(String name, String password) {
         Optional<Admin> adminOpt = adminRepository.findByName(name);
         if (adminOpt.isPresent()) {
@@ -83,6 +87,11 @@ public class AdminService {
         admin.setPassword(passwordEncoder.encode(rawPassword));
         adminRepository.save(admin);
     }
+
+    public List<Student> getStudentsByAdminCourseSemester(String admin, String course, String semesterId) {
+        return studentRepository.findByAdminAndCourseAndSemesterId(admin, course, semesterId);
+    }
+
 
 
 }

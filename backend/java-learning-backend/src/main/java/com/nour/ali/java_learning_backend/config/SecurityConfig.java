@@ -21,10 +21,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableMethodSecurity
@@ -40,6 +44,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .exceptionHandling(e -> e.authenticationEntryPoint(customEntryPoint))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -68,6 +73,19 @@ public class SecurityConfig {
     }
 
     @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(List.of("http://localhost:*", "https://nourali460.github.io"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
+    @Bean
     public OncePerRequestFilter jwtAuthFilter() {
         return new OncePerRequestFilter() {
             @Override
@@ -76,10 +94,9 @@ public class SecurityConfig {
                                             FilterChain filterChain) throws ServletException, IOException {
                 String method = request.getMethod();
                 String uri = request.getRequestURI();
-                System.out.println("➡️ Incoming request: " + method + " " + uri);
+                System.out.println("\u27a1\ufe0f Incoming request: " + method + " " + uri);
 
-                // Print all headers for debugging
-                System.out.println("📦 Headers:");
+                System.out.println("\ud83d\udce6 Headers:");
                 Collections.list(request.getHeaderNames()).forEach(name ->
                         System.out.println("   → " + name + ": " + request.getHeader(name)));
 
@@ -87,16 +104,16 @@ public class SecurityConfig {
 
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
                     String token = authHeader.substring(7);
-                    System.out.println("🔐 Token received: " + token);
+                    System.out.println("\ud83d\udd10 Token received: " + token);
 
                     try {
                         String username = jwtService.extractUsername(token);
                         String role = jwtService.extractRole(token);
                         boolean valid = jwtService.validateToken(token);
 
-                        System.out.println("🧠 Username: " + username);
-                        System.out.println("🎭 Role: " + role);
-                        System.out.println("✅ Is token valid? " + valid);
+                        System.out.println("\ud83e\uddd0 Username: " + username);
+                        System.out.println("\ud83c\udfad Role: " + role);
+                        System.out.println("\u2705 Is token valid? " + valid);
 
                         if (username != null &&
                                 valid &&
@@ -107,21 +124,21 @@ public class SecurityConfig {
                                             username, null, Collections.emptyList());
 
                             SecurityContextHolder.getContext().setAuthentication(authentication);
-                            System.out.println("🟢 Authentication successful for: " + username);
+                            System.out.println("\ud83d\udfe2 Authentication successful for: " + username);
                         } else {
-                            System.out.println("⚠️ Token invalid or already authenticated.");
+                            System.out.println("\u26a0\ufe0f Token invalid or already authenticated.");
                         }
 
                     } catch (JwtException e) {
-                        System.out.println("❌ JWT error: " + e.getMessage());
+                        System.out.println("\u274c JWT error: " + e.getMessage());
                         e.printStackTrace();
                     } catch (Exception e) {
-                        System.out.println("❌ Unexpected error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                        System.out.println("\u274c Unexpected error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                         e.printStackTrace();
                     }
 
                 } else {
-                    System.out.println("❗ No Authorization header or malformed header.");
+                    System.out.println("\u2757 No Authorization header or malformed header.");
                     if (authHeader != null) {
                         System.out.println("   ⛔ Found header: " + authHeader);
                     }

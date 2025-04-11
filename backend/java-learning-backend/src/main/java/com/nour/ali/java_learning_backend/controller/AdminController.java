@@ -7,6 +7,7 @@ import com.nour.ali.java_learning_backend.model.AdminRole;
 import com.nour.ali.java_learning_backend.model.Student;
 import com.nour.ali.java_learning_backend.service.AdminService;
 import com.nour.ali.java_learning_backend.service.JwtService;
+import com.nour.ali.java_learning_backend.service.StudentService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,10 @@ public class AdminController {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private StudentService studentService;
+
 
     @PostMapping("/validate")
     public ResponseEntity<?> validateAdmin(@RequestBody AdminRequestDTO request) {
@@ -190,6 +195,45 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized or invalid token"));
         }
     }
+
+    @GetMapping("/students/passwords")
+    public ResponseEntity<?> getStudentPasswords(
+            @RequestParam String admin,
+            @RequestParam String course,
+            @RequestParam String semesterId,
+            HttpServletRequest request
+    ) {
+        String token = jwtService.extractToken(request);
+        if (token == null || token.isBlank()) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        }
+
+        String requester = jwtService.extractUsername(token);
+        AdminRole role;
+        try {
+            role = AdminRole.valueOf(jwtService.extractRole(token));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(403).body(Map.of("error", "Invalid role"));
+        }
+
+        // ✅ Allow SUPERADMIN always, ADMIN only if requesting their own students
+        if (role != AdminRole.SUPERADMIN && !(role == AdminRole.ADMIN && requester.equals(admin))) {
+            return ResponseEntity.status(403).body(Map.of("error", "Access denied"));
+        }
+
+        List<Student> students = studentService.getStudentsByAdminCourseSemester(admin, course, semesterId);
+
+        List<Map<String, String>> response = students.stream()
+                .map(s -> Map.of(
+                        "id", s.getId(),
+                        "email", s.getEmail(),
+                        "hashedPassword", s.getPassword()
+                )).toList();
+
+        return ResponseEntity.ok(response);
+    }
+
+
 
 
 }

@@ -166,14 +166,22 @@ public class StudentController {
     public ResponseEntity<?> whoAmI(HttpServletRequest request) {
         String token = jwtService.extractToken(request);
         if (token == null) {
-            return ResponseEntity.status(401).body("{\"error\": \"Unauthorized\"}");
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
         }
 
-        String userId = jwtService.extractUsername(token);
-        String role = jwtService.extractRole(token);
+        try {
+            String userId = jwtService.extractUsername(token);
+            String role = jwtService.extractRole(token);
 
-        return ResponseEntity.ok().body("{\"user\": \"" + userId + "\", \"role\": \"" + role + "\"}");
+            return ResponseEntity.ok(Map.of(
+                    "user", userId,
+                    "role", role
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid token"));
+        }
     }
+
 
     @PostMapping("/activate")
     public ResponseEntity<?> activateStudent(@RequestBody Map<String, String> payload, HttpServletRequest request) {
