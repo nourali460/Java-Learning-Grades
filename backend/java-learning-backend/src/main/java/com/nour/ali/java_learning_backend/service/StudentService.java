@@ -84,8 +84,6 @@ public class StudentService {
         Enrollment enrollment = new Enrollment();
         enrollment.setId(enrollmentId);
         enrollment.setStudent(student);
-        enrollment.setCourse(dto.getCourse());
-        enrollment.setSemesterId(dto.getSemesterId());
         enrollment.setAdmin(dto.getAdmin());
 
         enrollmentRepository.save(enrollment);
