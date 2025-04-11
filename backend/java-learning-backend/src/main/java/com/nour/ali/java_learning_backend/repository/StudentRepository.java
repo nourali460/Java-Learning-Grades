@@ -1,4 +1,3 @@
-// File: repository/StudentRepository.java
 package com.nour.ali.java_learning_backend.repository;
 
 import com.nour.ali.java_learning_backend.model.Student;
@@ -17,7 +16,5 @@ public interface StudentRepository extends JpaRepository<Student, String> {
     @Query("SELECT s FROM Student s JOIN Enrollment e ON s.id = e.id.studentId " +
             "WHERE e.admin = :admin AND e.id.course = :course AND e.id.semesterId = :semesterId")
     List<Student> findAllByAdminAndCourseAndSemester(String admin, String course, String semesterId);
-
-    List<Student> findByAdminAndCourseAndSemesterId(String admin, String course, String semesterId);
 
 }
