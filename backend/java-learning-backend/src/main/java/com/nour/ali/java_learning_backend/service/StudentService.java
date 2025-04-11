@@ -93,7 +93,7 @@ public class StudentService {
         );
     }
 
-    public Student addOrUpdateStudent(StudentRequestDTO dto) {
+    public Map<String, Object> addOrUpdateStudent(StudentRequestDTO dto) {
         if (dto.getId() == null || dto.getId().trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student ID cannot be empty");
         }
@@ -114,14 +114,14 @@ public class StudentService {
         student.setId(dto.getId());
         student.setEmail(dto.getEmail());
 
+        String rawPassword = dto.getPassword();
+
         if (existingById.isEmpty()) {
-            // Handle optional password
-            String rawPassword = dto.getPassword();
             if (rawPassword == null || rawPassword.trim().isEmpty()) {
-                rawPassword = generateRandomPassword(6); // Default to 6-character
+                rawPassword = generateRandomPassword(6);
             }
 
-            student.setPassword(rawPassword); // Not hashed
+            student.setPassword(rawPassword); // unhashed, as expected
             student.setCreatedAt(Instant.now());
             student.setPaid(false);
             student.setActive(false);
@@ -140,18 +140,23 @@ public class StudentService {
         student = studentRepository.save(student);
 
         EnrollmentId enrollmentId = new EnrollmentId(dto.getId(), dto.getCourse(), dto.getSemesterId());
-        if (enrollmentRepository.existsById(enrollmentId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Student already enrolled in this course/semester");
+        if (!enrollmentRepository.existsById(enrollmentId)) {
+            Enrollment enrollment = new Enrollment();
+            enrollment.setId(enrollmentId);
+            enrollment.setStudent(student);
+            enrollment.setAdmin(dto.getAdmin());
+            enrollmentRepository.save(enrollment);
         }
 
-        Enrollment enrollment = new Enrollment();
-        enrollment.setId(enrollmentId);
-        enrollment.setStudent(student);
-        enrollment.setAdmin(dto.getAdmin());
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("studentId", student.getId());
+        response.put("email", student.getEmail());
+        response.put("password", rawPassword != null ? rawPassword : "unchanged");
 
-        enrollmentRepository.save(enrollment);
-        return student;
+        return response;
     }
+
 
     private String generateRandomPassword(int length) {
         String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
