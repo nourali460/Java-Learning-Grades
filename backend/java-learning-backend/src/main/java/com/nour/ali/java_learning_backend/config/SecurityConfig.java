@@ -54,6 +54,7 @@ public class SecurityConfig {
                                 "/h2-console/**",
                                 "/admins/validate",
                                 "/students/validate",
+                                "/students/add",
                                 "/roles",
                                 "/admins",
                                 "/admins/contains",
