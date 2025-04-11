@@ -94,6 +94,13 @@ public class StudentService {
     }
 
     public Map<String, Object> addOrUpdateStudent(StudentRequestDTO dto) {
+        System.out.println("📥 Incoming student add/update request:");
+        System.out.println("  🔹 ID: " + dto.getId());
+        System.out.println("  🔹 Email: " + dto.getEmail());
+        System.out.println("  🔹 Admin: " + dto.getAdmin());
+        System.out.println("  🔹 Course: " + dto.getCourse());
+        System.out.println("  🔹 Semester: " + dto.getSemesterId());
+
         if (dto.getId() == null || dto.getId().trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student ID cannot be empty");
         }
@@ -107,6 +114,7 @@ public class StudentService {
 
         if (existingByEmail.isPresent() &&
                 (!existingById.isPresent() || !existingByEmail.get().getId().equals(dto.getId()))) {
+            System.out.println("❌ Email already used by another student.");
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use by another student");
         }
 
@@ -117,11 +125,14 @@ public class StudentService {
         String rawPassword = dto.getPassword();
 
         if (existingById.isEmpty()) {
+            System.out.println("🆕 Creating new student record...");
+
             if (rawPassword == null || rawPassword.trim().isEmpty()) {
                 rawPassword = generateRandomPassword(6);
+                System.out.println("  🔐 Auto-generated password: " + rawPassword);
             }
 
-            student.setPassword(rawPassword); // unhashed, as expected
+            student.setPassword(rawPassword);
             student.setCreatedAt(Instant.now());
             student.setPaid(false);
             student.setActive(false);
@@ -130,22 +141,30 @@ public class StudentService {
             try {
                 String checkoutUrl = stripeService.generateCheckoutUrl(dto.getId());
                 student.setPaymentLink(checkoutUrl);
+                System.out.println("  💳 Stripe checkout URL created");
             } catch (Exception e) {
+                System.out.println("❌ Stripe error: " + e.getMessage());
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to generate payment link");
             }
-
-            System.out.println("🆕 New student password (" + dto.getId() + "): " + rawPassword);
+        } else {
+            System.out.println("✅ Existing student found: " + dto.getId());
         }
 
         student = studentRepository.save(student);
+        System.out.println("✅ Student saved to DB: " + student.getId());
 
         EnrollmentId enrollmentId = new EnrollmentId(dto.getId(), dto.getCourse(), dto.getSemesterId());
         if (!enrollmentRepository.existsById(enrollmentId)) {
+            System.out.println("📚 Enrolling student in course: " + dto.getCourse() + " | Semester: " + dto.getSemesterId());
             Enrollment enrollment = new Enrollment();
             enrollment.setId(enrollmentId);
             enrollment.setStudent(student);
             enrollment.setAdmin(dto.getAdmin());
+
             enrollmentRepository.save(enrollment);
+            System.out.println("✅ Enrollment created.");
+        } else {
+            System.out.println("⚠️ Student already enrolled in this course/semester.");
         }
 
         Map<String, Object> response = new HashMap<>();
@@ -156,6 +175,7 @@ public class StudentService {
 
         return response;
     }
+
 
 
     private String generateRandomPassword(int length) {
