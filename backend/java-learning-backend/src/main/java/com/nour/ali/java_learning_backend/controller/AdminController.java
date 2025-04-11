@@ -126,7 +126,7 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("exists", exists));
     }
 
-    
+
     @PostMapping("/update-student-password")
     public ResponseEntity<?> updateStudentPassword(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
         String studentId = request.get("studentId");
