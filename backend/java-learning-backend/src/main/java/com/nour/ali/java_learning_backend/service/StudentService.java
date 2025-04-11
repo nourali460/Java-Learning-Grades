@@ -37,10 +37,60 @@ public class StudentService {
         this.stripeService = stripeService;
     }
 
-
-
     public List<Student> getStudentsByAdminCourseSemester(String admin, String course, String semesterId) {
         return studentRepository.findAllByAdminAndCourseAndSemester(admin, course, semesterId);
+    }
+
+    public boolean removeEnrollment(String username, String course, String semesterId) {
+        EnrollmentId id = new EnrollmentId(username, course, semesterId);
+        if (!enrollmentRepository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Enrollment not found");
+        }
+        enrollmentRepository.deleteById(id);
+        return true;
+    }
+
+    public boolean validatePassword(String rawPassword, String storedPassword) {
+        // If you're skipping hashing for now:
+        return Objects.equals(rawPassword, storedPassword);
+
+        // If hashing is reintroduced later:
+        // return passwordEncoder.matches(rawPassword, storedPassword);
+    }
+
+    public Student save(Student student) {
+        return studentRepository.save(student);
+    }
+
+    public Optional<Student> findById(String id) {
+        return studentRepository.findById(id);
+    }
+    public List<Student> getStudentsByAdmin(String admin) {
+        List<Enrollment> enrollments = enrollmentRepository.findByAdmin(admin);
+        Set<String> studentIds = enrollments.stream()
+                .map(e -> e.getStudent().getId())
+                .collect(Collectors.toSet());
+
+        return studentRepository.findAll().stream()
+                .filter(s -> studentIds.contains(s.getId()))
+                .collect(Collectors.toList());
+    }
+
+    public StudentResponseDTO toResponseDTO(Student student) {
+        List<EnrollmentDTO> enrollmentDTOs = student.getEnrollments().stream()
+                .map(e -> new EnrollmentDTO(e.getCourse(), e.getSemesterId(), e.getAdmin()))
+                .collect(Collectors.toList());
+
+        return new StudentResponseDTO(
+                student.getId(),
+                student.getEmail(),
+                student.isPaid(),
+                student.getPaymentLink(),
+                student.isActive(),
+                student.getCreatedAt(),
+                student.getPaymentDate(),
+                enrollmentDTOs
+        );
     }
 
     public Student addOrUpdateStudent(StudentRequestDTO dto) {
@@ -65,13 +115,13 @@ public class StudentService {
         student.setEmail(dto.getEmail());
 
         if (existingById.isEmpty()) {
-            // ✅ Handle optional password
+            // Handle optional password
             String rawPassword = dto.getPassword();
             if (rawPassword == null || rawPassword.trim().isEmpty()) {
-                rawPassword = generateRandomPassword(6); // Default: 6-character alphanumeric
+                rawPassword = generateRandomPassword(6); // Default to 6-character
             }
 
-            student.setPassword(rawPassword); // 🔓 Not hashed
+            student.setPassword(rawPassword); // Not hashed
             student.setCreatedAt(Instant.now());
             student.setPaid(false);
             student.setActive(false);
@@ -89,7 +139,6 @@ public class StudentService {
 
         student = studentRepository.save(student);
 
-        // ✅ Create enrollment
         EnrollmentId enrollmentId = new EnrollmentId(dto.getId(), dto.getCourse(), dto.getSemesterId());
         if (enrollmentRepository.existsById(enrollmentId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Student already enrolled in this course/semester");
@@ -104,19 +153,13 @@ public class StudentService {
         return student;
     }
 
-    // 🔒 Add this inside your StudentService class
     private String generateRandomPassword(int length) {
-        String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         StringBuilder sb = new StringBuilder(length);
         Random random = new Random();
-
         for (int i = 0; i < length; i++) {
-            int index = random.nextInt(alphabet.length());
-            sb.append(alphabet.charAt(index));
+            sb.append(characters.charAt(random.nextInt(characters.length())));
         }
-
         return sb.toString();
     }
-
-
 }
