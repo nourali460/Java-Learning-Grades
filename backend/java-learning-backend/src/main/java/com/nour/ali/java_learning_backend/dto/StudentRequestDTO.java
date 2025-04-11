@@ -7,31 +7,36 @@ public class StudentRequestDTO {
     private String id;
     private String password;
     private String email;
-    private String admin;
     private boolean paid;
     private String paymentLink;
     private boolean active;
     private Instant createdAt;
     private Instant paymentDate;
-    private String semesterId; // ✅ New field
 
-    public StudentRequestDTO() {
-    }
+    // 🎯 New Enrollment-specific fields
+    private String course;
+    private String semesterId;
+    private String admin;
 
-    public StudentRequestDTO(String id, String password, String email, String admin,
-                             boolean paid, String paymentLink, boolean active,
-                             Instant createdAt, Instant paymentDate, String semesterId) {
+    public StudentRequestDTO() {}
+
+    public StudentRequestDTO(String id, String password, String email, boolean paid, String paymentLink,
+                             boolean active, Instant createdAt, Instant paymentDate,
+                             String course, String semesterId, String admin) {
         this.id = id;
         this.password = password;
         this.email = email;
-        this.admin = admin;
         this.paid = paid;
         this.paymentLink = paymentLink;
         this.active = active;
         this.createdAt = createdAt;
         this.paymentDate = paymentDate;
+        this.course = course;
         this.semesterId = semesterId;
+        this.admin = admin;
     }
+
+    // --- Getters & Setters ---
 
     public String getId() {
         return id;
@@ -55,14 +60,6 @@ public class StudentRequestDTO {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getAdmin() {
-        return admin;
-    }
-
-    public void setAdmin(String admin) {
-        this.admin = admin;
     }
 
     public boolean isPaid() {
@@ -105,11 +102,27 @@ public class StudentRequestDTO {
         this.paymentDate = paymentDate;
     }
 
+    public String getCourse() {
+        return course;
+    }
+
+    public void setCourse(String course) {
+        this.course = course;
+    }
+
     public String getSemesterId() {
         return semesterId;
     }
 
     public void setSemesterId(String semesterId) {
         this.semesterId = semesterId;
+    }
+
+    public String getAdmin() {
+        return admin;
+    }
+
+    public void setAdmin(String admin) {
+        this.admin = admin;
     }
 }

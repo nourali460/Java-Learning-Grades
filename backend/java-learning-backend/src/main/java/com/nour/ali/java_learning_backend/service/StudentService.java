@@ -1,7 +1,12 @@
 package com.nour.ali.java_learning_backend.service;
 
+import com.nour.ali.java_learning_backend.dto.EnrollmentDTO;
 import com.nour.ali.java_learning_backend.dto.StudentRequestDTO;
+import com.nour.ali.java_learning_backend.dto.StudentResponseDTO;
+import com.nour.ali.java_learning_backend.model.Enrollment;
+import com.nour.ali.java_learning_backend.model.EnrollmentId;
 import com.nour.ali.java_learning_backend.model.Student;
+import com.nour.ali.java_learning_backend.repository.EnrollmentRepository;
 import com.nour.ali.java_learning_backend.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -10,20 +15,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class StudentService {
 
     private final StudentRepository studentRepository;
+    private final EnrollmentRepository enrollmentRepository;
     private final PasswordEncoder passwordEncoder;
     private final StripeService stripeService;
 
     @Autowired
     public StudentService(StudentRepository studentRepository,
+                          EnrollmentRepository enrollmentRepository,
                           PasswordEncoder passwordEncoder,
                           StripeService stripeService) {
         this.studentRepository = studentRepository;
+        this.enrollmentRepository = enrollmentRepository;
         this.passwordEncoder = passwordEncoder;
         this.stripeService = stripeService;
     }
@@ -48,11 +57,9 @@ public class StudentService {
         Student student = existingById.orElse(new Student());
         student.setId(dto.getId());
         student.setEmail(dto.getEmail());
-        student.setPassword(passwordEncoder.encode(dto.getPassword()));
-        student.setAdmin(dto.getAdmin());
-        student.setSemesterId(dto.getSemesterId()); // ✅ Set semester
 
         if (existingById.isEmpty()) {
+            student.setPassword(passwordEncoder.encode(dto.getPassword()));
             student.setCreatedAt(Instant.now());
             student.setPaid(false);
             student.setActive(false);
@@ -66,14 +73,31 @@ public class StudentService {
             }
         }
 
-        return studentRepository.save(student);
+        student = studentRepository.save(student);
+
+        // Add new enrollment
+        EnrollmentId enrollmentId = new EnrollmentId(dto.getId(), dto.getCourse(), dto.getSemesterId());
+        if (enrollmentRepository.existsById(enrollmentId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Student already enrolled in this course/semester");
+        }
+
+        Enrollment enrollment = new Enrollment();
+        enrollment.setId(enrollmentId);
+        enrollment.setStudent(student);
+        enrollment.setCourse(dto.getCourse());
+        enrollment.setSemesterId(dto.getSemesterId());
+        enrollment.setAdmin(dto.getAdmin());
+
+        enrollmentRepository.save(enrollment);
+        return student;
     }
 
-    public boolean removeStudent(String id) {
-        if (!studentRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student with ID '" + id + "' not found");
+    public boolean removeEnrollment(String username, String course, String semesterId) {
+        EnrollmentId id = new EnrollmentId(username, course, semesterId);
+        if (!enrollmentRepository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Enrollment not found");
         }
-        studentRepository.deleteById(id);
+        enrollmentRepository.deleteById(id);
         return true;
     }
 
@@ -83,6 +107,34 @@ public class StudentService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student with ID '" + id + "' not found");
         }
         return student;
+    }
+
+    public List<Student> getStudentsByAdmin(String admin) {
+        List<Enrollment> enrollments = enrollmentRepository.findByAdmin(admin);
+        Set<String> studentIds = enrollments.stream()
+                .map(e -> e.getStudent().getId())
+                .collect(Collectors.toSet());
+
+        return studentRepository.findAll().stream()
+                .filter(s -> studentIds.contains(s.getId()))
+                .collect(Collectors.toList());
+    }
+
+    public StudentResponseDTO toResponseDTO(Student student) {
+        List<EnrollmentDTO> enrollmentDTOs = student.getEnrollments().stream()
+                .map(e -> new EnrollmentDTO(e.getCourse(), e.getSemesterId(), e.getAdmin()))
+                .collect(Collectors.toList());
+
+        return new StudentResponseDTO(
+                student.getId(),
+                student.getEmail(),
+                student.isPaid(),
+                student.getPaymentLink(),
+                student.isActive(),
+                student.getCreatedAt(),
+                student.getPaymentDate(),
+                enrollmentDTOs
+        );
     }
 
     public boolean validatePassword(String rawPassword, String encodedPassword) {

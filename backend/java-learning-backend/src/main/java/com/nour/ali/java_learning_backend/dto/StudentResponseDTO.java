@@ -1,35 +1,36 @@
 package com.nour.ali.java_learning_backend.dto;
 
 import java.time.Instant;
+import java.util.List;
 
 public class StudentResponseDTO {
 
     private String id;
     private String email;
-    private String admin;
     private boolean paid;
     private String paymentLink;
     private boolean active;
     private Instant createdAt;
     private Instant paymentDate;
-    private String semesterId; // ✅ New field added
 
-    public StudentResponseDTO() {
-    }
+    private List<EnrollmentDTO> enrollments; // ✅ new field
 
-    public StudentResponseDTO(String id, String email, String admin, boolean paid,
-                              String paymentLink, boolean active,
-                              Instant createdAt, Instant paymentDate, String semesterId) {
+    public StudentResponseDTO() {}
+
+    public StudentResponseDTO(String id, String email, boolean paid, String paymentLink,
+                              boolean active, Instant createdAt, Instant paymentDate,
+                              List<EnrollmentDTO> enrollments) {
         this.id = id;
         this.email = email;
-        this.admin = admin;
         this.paid = paid;
         this.paymentLink = paymentLink;
         this.active = active;
         this.createdAt = createdAt;
         this.paymentDate = paymentDate;
-        this.semesterId = semesterId;
+        this.enrollments = enrollments;
     }
+
+    // --- Getters & Setters ---
 
     public String getId() {
         return id;
@@ -45,14 +46,6 @@ public class StudentResponseDTO {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getAdmin() {
-        return admin;
-    }
-
-    public void setAdmin(String admin) {
-        this.admin = admin;
     }
 
     public boolean isPaid() {
@@ -95,11 +88,11 @@ public class StudentResponseDTO {
         this.paymentDate = paymentDate;
     }
 
-    public String getSemesterId() {
-        return semesterId;
+    public List<EnrollmentDTO> getEnrollments() {
+        return enrollments;
     }
 
-    public void setSemesterId(String semesterId) {
-        this.semesterId = semesterId;
+    public void setEnrollments(List<EnrollmentDTO> enrollments) {
+        this.enrollments = enrollments;
     }
 }

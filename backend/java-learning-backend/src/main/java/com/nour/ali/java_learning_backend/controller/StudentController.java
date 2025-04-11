@@ -1,6 +1,7 @@
 package com.nour.ali.java_learning_backend.controller;
 
 import com.nour.ali.java_learning_backend.dto.StudentRequestDTO;
+import com.nour.ali.java_learning_backend.dto.StudentResponseDTO;
 import com.nour.ali.java_learning_backend.model.AdminRole;
 import com.nour.ali.java_learning_backend.model.Student;
 import com.nour.ali.java_learning_backend.service.JwtService;
@@ -16,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -62,25 +64,26 @@ public class StudentController {
 
 
     @DeleteMapping("/remove")
-    public ResponseEntity<?> removeStudent(@RequestBody StudentRequestDTO dto, HttpServletRequest request) {
+    public ResponseEntity<?> removeEnrollment(@RequestBody StudentRequestDTO dto, HttpServletRequest request) {
         try {
             AdminRole role = AdminRole.valueOf(jwtService.extractRole(jwtService.extractToken(request)));
             if (role != AdminRole.ADMIN && role != AdminRole.SUPERADMIN) {
-                System.out.println("❌ Unauthorized attempt to remove student by role: " + role);
+                System.out.println("❌ Unauthorized attempt to remove student enrollment by role: " + role);
                 return ResponseEntity.status(403).body("{\"message\": \"Forbidden: Admin access required\"}");
             }
         } catch (Exception e) {
             return ResponseEntity.status(403).body("{\"message\": \"Invalid or missing role in token\"}");
         }
 
-        boolean removed = studentService.removeStudent(dto.getId());
+        boolean removed = studentService.removeEnrollment(dto.getId(), dto.getCourse(), dto.getSemesterId());
         if (removed) {
-            System.out.println("✅ Student removed: " + dto.getId());
-            return ResponseEntity.ok().body("{\"message\": \"Student removed\"}");
+            System.out.println("✅ Enrollment removed: " + dto.getId() + " - " + dto.getCourse() + " (" + dto.getSemesterId() + ")");
+            return ResponseEntity.ok().body("{\"message\": \"Enrollment removed\"}");
         } else {
-            return ResponseEntity.status(404).body("{\"message\": \"Student not found\"}");
+            return ResponseEntity.status(404).body("{\"message\": \"Enrollment not found\"}");
         }
     }
+
 
     @PostMapping("/validate")
     public ResponseEntity<?> validateStudent(@RequestBody StudentRequestDTO dto) {
@@ -229,4 +232,25 @@ public class StudentController {
         System.out.println("✅ Student approved (active + paid): " + studentId);
         return ResponseEntity.ok().body("{\"message\": \"Student marked as active and paid\"}");
     }
+
+    @GetMapping
+    public ResponseEntity<?> getStudentsByAdmin(@RequestParam String admin, HttpServletRequest request) {
+        try {
+            AdminRole role = AdminRole.valueOf(jwtService.extractRole(jwtService.extractToken(request)));
+            if (role != AdminRole.ADMIN && role != AdminRole.SUPERADMIN) {
+                return ResponseEntity.status(403).body("{\"message\": \"Forbidden: Admin access required\"}");
+            }
+
+            List<Student> all = studentService.getStudentsByAdmin(admin);
+            List<StudentResponseDTO> dtos = all.stream()
+                    .map(studentService::toResponseDTO)
+                    .toList();
+
+            return ResponseEntity.ok(dtos);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("{\"message\": \"Failed to fetch students\"}");
+        }
+    }
+
 }

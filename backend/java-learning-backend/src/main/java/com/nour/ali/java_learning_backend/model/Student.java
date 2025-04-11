@@ -2,6 +2,8 @@ package com.nour.ali.java_learning_backend.model;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "students")
@@ -9,16 +11,13 @@ public class Student {
 
     @Id
     @Column(nullable = false, unique = true)
-    private String id;
+    private String id; // username
 
     @Column(nullable = false)
     private String password;
 
     @Column(nullable = false, unique = true)
     private String email;
-
-    @Column(nullable = false)
-    private String admin;
 
     @Column(nullable = false)
     private boolean paid;
@@ -35,19 +34,13 @@ public class Student {
     @Column
     private Instant paymentDate;
 
-    @Column(nullable = true)
-    private String semesterId;
+    // 🔥 NEW: One student -> many enrollments
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Enrollment> enrollments = new ArrayList<>();
 
     public Student() {}
 
-    public String getSemesterId() {
-        return semesterId;
-    }
-
-    public void setSemesterId(String semesterId) {
-        this.semesterId = semesterId;
-    }
-
+    // --- Getters & Setters ---
     public String getId() {
         return id;
     }
@@ -70,14 +63,6 @@ public class Student {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getAdmin() {
-        return admin;
-    }
-
-    public void setAdmin(String admin) {
-        this.admin = admin;
     }
 
     public boolean isPaid() {
@@ -120,19 +105,26 @@ public class Student {
         this.paymentDate = paymentDate;
     }
 
+    public List<Enrollment> getEnrollments() {
+        return enrollments;
+    }
+
+    public void setEnrollments(List<Enrollment> enrollments) {
+        this.enrollments = enrollments;
+    }
+
     @Override
     public String toString() {
         return "Student{" +
                 "id='" + id + '\'' +
                 ", password='" + password + '\'' +
                 ", email='" + email + '\'' +
-                ", admin='" + admin + '\'' +
                 ", paid=" + paid +
                 ", paymentLink='" + paymentLink + '\'' +
                 ", active=" + active +
                 ", createdAt=" + createdAt +
                 ", paymentDate=" + paymentDate +
-                ", semesterId='" + semesterId + '\'' +
+                ", enrollments=" + enrollments +
                 '}';
     }
 }
