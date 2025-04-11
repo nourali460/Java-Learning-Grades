@@ -10,6 +10,7 @@ import com.nour.ali.java_learning_backend.repository.EnrollmentRepository;
 import com.nour.ali.java_learning_backend.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -92,14 +93,22 @@ public class StudentService {
                 enrollmentDTOs
         );
     }
-
+    
     public Map<String, Object> addOrUpdateStudent(StudentRequestDTO dto) {
         System.out.println("📥 Incoming student add/update request:");
         System.out.println("  🔹 ID: " + dto.getId());
         System.out.println("  🔹 Email: " + dto.getEmail());
-        System.out.println("  🔹 Admin: " + dto.getAdmin());
         System.out.println("  🔹 Course: " + dto.getCourse());
         System.out.println("  🔹 Semester: " + dto.getSemesterId());
+
+        // ✅ Get admin username from JWT token
+        String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (adminUsername == null || adminUsername.isBlank()) {
+            System.out.println("❌ No valid admin in token. Session likely expired.");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Session expired. Please log in again.");
+        }
+
+        System.out.println("  🔐 Authenticated admin: " + adminUsername);
 
         if (dto.getId() == null || dto.getId().trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student ID cannot be empty");
@@ -159,8 +168,7 @@ public class StudentService {
             Enrollment enrollment = new Enrollment();
             enrollment.setId(enrollmentId);
             enrollment.setStudent(student);
-            enrollment.setAdmin(dto.getAdmin());
-
+            enrollment.setAdmin(adminUsername); // ✅ Use the authenticated username
             enrollmentRepository.save(enrollment);
             System.out.println("✅ Enrollment created.");
         } else {
@@ -175,6 +183,7 @@ public class StudentService {
 
         return response;
     }
+
 
 
 
