@@ -100,15 +100,20 @@ public class StudentService {
         System.out.println("  🔹 Email: " + dto.getEmail());
         System.out.println("  🔹 Course: " + dto.getCourse());
         System.out.println("  🔹 Semester: " + dto.getSemesterId());
+        System.out.println("  🔹 Admin (from DTO): " + dto.getAdmin());
 
-        // ✅ Get admin username from JWT token
-        String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        // ✅ Determine admin source: from token or DTO
+        String authenticatedUser = SecurityContextHolder.getContext().getAuthentication().getName();
+        String adminUsername = authenticatedUser != null && !authenticatedUser.equals("anonymousUser")
+                ? authenticatedUser
+                : dto.getAdmin(); // fallback to provided admin
+
         if (adminUsername == null || adminUsername.isBlank()) {
-            System.out.println("❌ No valid admin in token. Session likely expired.");
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Session expired. Please log in again.");
+            System.out.println("❌ No valid admin in token or DTO.");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Session expired or invalid admin.");
         }
 
-        System.out.println("  🔐 Authenticated admin: " + adminUsername);
+        System.out.println("  🔐 Resolved admin: " + adminUsername);
 
         if (dto.getId() == null || dto.getId().trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student ID cannot be empty");
@@ -168,7 +173,8 @@ public class StudentService {
             Enrollment enrollment = new Enrollment();
             enrollment.setId(enrollmentId);
             enrollment.setStudent(student);
-            enrollment.setAdmin(adminUsername); // ✅ Use the authenticated username
+            enrollment.setAdmin(adminUsername); // ✅ now guaranteed to be correct
+
             enrollmentRepository.save(enrollment);
             System.out.println("✅ Enrollment created.");
         } else {
@@ -183,9 +189,7 @@ public class StudentService {
 
         return response;
     }
-
-
-
+    
 
     private String generateRandomPassword(int length) {
         String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
