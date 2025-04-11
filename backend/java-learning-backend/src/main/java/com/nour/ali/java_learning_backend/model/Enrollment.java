@@ -10,26 +10,17 @@ public class Enrollment {
     private EnrollmentId id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("studentId")
-    @JoinColumn(name = "student_id")
+    @JoinColumn(name = "student_id", referencedColumnName = "id", insertable = false, updatable = false)
     private Student student;
 
     @Column(nullable = false)
-    private String course;
-
-    @Column(nullable = false)
-    private String semesterId;
-
-    @Column(nullable = false)
-    private String admin; // professor who added this enrollment
+    private String admin;
 
     public Enrollment() {}
 
-    public Enrollment(EnrollmentId id, Student student, String course, String semesterId, String admin) {
+    public Enrollment(EnrollmentId id, Student student, String admin) {
         this.id = id;
         this.student = student;
-        this.course = course;
-        this.semesterId = semesterId;
         this.admin = admin;
     }
 
@@ -50,19 +41,11 @@ public class Enrollment {
     }
 
     public String getCourse() {
-        return course;
-    }
-
-    public void setCourse(String course) {
-        this.course = course;
+        return id.getCourse();
     }
 
     public String getSemesterId() {
-        return semesterId;
-    }
-
-    public void setSemesterId(String semesterId) {
-        this.semesterId = semesterId;
+        return id.getSemesterId();
     }
 
     public String getAdmin() {
@@ -77,8 +60,6 @@ public class Enrollment {
     public String toString() {
         return "Enrollment{" +
                 "id=" + id +
-                ", course='" + course + '\'' +
-                ", semesterId='" + semesterId + '\'' +
                 ", admin='" + admin + '\'' +
                 '}';
     }
