@@ -37,6 +37,12 @@ public class StudentService {
         this.stripeService = stripeService;
     }
 
+
+
+    public List<Student> getStudentsByAdminCourseSemester(String admin, String course, String semesterId) {
+        return studentRepository.findAllByAdminAndCourseAndSemester(admin, course, semesterId);
+    }
+
     public Student addOrUpdateStudent(StudentRequestDTO dto) {
         if (dto.getId() == null || dto.getId().trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student ID cannot be empty");
@@ -59,7 +65,13 @@ public class StudentService {
         student.setEmail(dto.getEmail());
 
         if (existingById.isEmpty()) {
-            student.setPassword(passwordEncoder.encode(dto.getPassword()));
+            // ✅ Handle optional password
+            String rawPassword = dto.getPassword();
+            if (rawPassword == null || rawPassword.trim().isEmpty()) {
+                rawPassword = generateRandomPassword(6); // Default: 6-character alphanumeric
+            }
+
+            student.setPassword(rawPassword); // 🔓 Not hashed
             student.setCreatedAt(Instant.now());
             student.setPaid(false);
             student.setActive(false);
@@ -71,11 +83,13 @@ public class StudentService {
             } catch (Exception e) {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to generate payment link");
             }
+
+            System.out.println("🆕 New student password (" + dto.getId() + "): " + rawPassword);
         }
 
         student = studentRepository.save(student);
 
-        // Add new enrollment
+        // ✅ Create enrollment
         EnrollmentId enrollmentId = new EnrollmentId(dto.getId(), dto.getCourse(), dto.getSemesterId());
         if (enrollmentRepository.existsById(enrollmentId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Student already enrolled in this course/semester");
@@ -90,76 +104,19 @@ public class StudentService {
         return student;
     }
 
-    public boolean removeEnrollment(String username, String course, String semesterId) {
-        EnrollmentId id = new EnrollmentId(username, course, semesterId);
-        if (!enrollmentRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Enrollment not found");
-        }
-        enrollmentRepository.deleteById(id);
-        return true;
-    }
+    // 🔒 Add this inside your StudentService class
+    private String generateRandomPassword(int length) {
+        String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sb = new StringBuilder(length);
+        Random random = new Random();
 
-    public Optional<Student> findById(String id) {
-        Optional<Student> student = studentRepository.findById(id);
-        if (student.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student with ID '" + id + "' not found");
-        }
-        return student;
-    }
-
-    public List<Student> getStudentsByAdmin(String admin) {
-        List<Enrollment> enrollments = enrollmentRepository.findByAdmin(admin);
-        Set<String> studentIds = enrollments.stream()
-                .map(e -> e.getStudent().getId())
-                .collect(Collectors.toSet());
-
-        return studentRepository.findAll().stream()
-                .filter(s -> studentIds.contains(s.getId()))
-                .collect(Collectors.toList());
-    }
-
-    public StudentResponseDTO toResponseDTO(Student student) {
-        List<EnrollmentDTO> enrollmentDTOs = student.getEnrollments().stream()
-                .map(e -> new EnrollmentDTO(e.getCourse(), e.getSemesterId(), e.getAdmin()))
-                .collect(Collectors.toList());
-
-        return new StudentResponseDTO(
-                student.getId(),
-                student.getEmail(),
-                student.isPaid(),
-                student.getPaymentLink(),
-                student.isActive(),
-                student.getCreatedAt(),
-                student.getPaymentDate(),
-                enrollmentDTOs
-        );
-    }
-
-    public boolean validatePassword(String rawPassword, String encodedPassword) {
-        return passwordEncoder.matches(rawPassword, encodedPassword);
-    }
-
-    public Student save(Student student) {
-        return studentRepository.save(student);
-    }
-
-    public void markStudentAsPaid(String studentId) {
-        Optional<Student> optionalStudent = studentRepository.findById(studentId);
-
-        if (optionalStudent.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found");
+        for (int i = 0; i < length; i++) {
+            int index = random.nextInt(alphabet.length());
+            sb.append(alphabet.charAt(index));
         }
 
-        Student student = optionalStudent.get();
-        student.setPaid(true);
-        student.setActive(true);
-        student.setPaymentDate(Instant.now());
-
-        studentRepository.save(student);
+        return sb.toString();
     }
 
-    public List<Student> getStudentsByAdminCourseSemester(String admin, String course, String semesterId) {
-        return studentRepository.findAllByAdminAndCourseAndSemester(admin, course, semesterId);
-    }
 
 }
