@@ -64,6 +64,7 @@ public class SecurityConfig {
                                 "/static/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/grades").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/admins/students/passwords").authenticated()
                         .requestMatchers(HttpMethod.POST, "/grades").authenticated()
                         .anyRequest().authenticated()
                 )

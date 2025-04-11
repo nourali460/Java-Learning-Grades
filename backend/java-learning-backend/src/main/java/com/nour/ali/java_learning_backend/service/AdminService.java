@@ -87,6 +87,6 @@ public class AdminService {
     public List<Student> getStudentsByAdminCourseSemester(String admin, String course, String semesterId) {
         return studentRepository.findAllByAdminAndCourseAndSemester(admin, course, semesterId);
     }
-    
+
 
 }
