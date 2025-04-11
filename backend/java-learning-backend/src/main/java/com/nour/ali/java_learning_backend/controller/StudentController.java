@@ -99,8 +99,7 @@ public class StudentController {
 
         Student student = optionalStudent.get();
 
-        if (!studentService.validatePassword(dto.getPassword(), student.getPassword())
-                || !student.getAdmin().equals(dto.getAdmin())) {
+        if (!studentService.validatePassword(dto.getPassword(), student.getPassword())) {
             String errorMessage = "Invalid credentials";
             System.out.println("🔁 Returning error: " + errorMessage);
             return ResponseEntity.status(401).body(Map.of(
@@ -111,7 +110,6 @@ public class StudentController {
 
         // Check if student is unpaid (but not expired)
         if (!student.isPaid()) {
-            // If they *were* paid before, check expiration
             if (student.getPaymentDate() != null) {
                 Instant now = Instant.now();
                 Instant expiration = student.getPaymentDate().plus(365, ChronoUnit.DAYS);
@@ -125,7 +123,6 @@ public class StudentController {
 
                         String errorMessage = "Access expired";
                         System.out.println("⚠️ Student's access expired, new payment link created: " + student.getId());
-                        System.out.println("🔁 Returning error: " + errorMessage + " with link: " + newLink);
                         return ResponseEntity.status(403).body(Map.of(
                                 "success", false,
                                 "error", errorMessage,
@@ -134,7 +131,6 @@ public class StudentController {
                     } catch (StripeException e) {
                         String errorMessage = "Failed to generate new payment link. Please try again later.";
                         System.out.println("❌ Stripe error while generating new payment link: " + e.getMessage());
-                        System.out.println("🔁 Returning error: " + errorMessage);
                         return ResponseEntity.status(500).body(Map.of(
                                 "success", false,
                                 "error", errorMessage
@@ -160,6 +156,7 @@ public class StudentController {
                 "token", token
         ));
     }
+
 
 
 
