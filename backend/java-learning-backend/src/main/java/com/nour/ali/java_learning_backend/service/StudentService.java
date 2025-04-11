@@ -93,7 +93,7 @@ public class StudentService {
                 enrollmentDTOs
         );
     }
-    
+
     public Map<String, Object> addOrUpdateStudent(StudentRequestDTO dto) {
         System.out.println("📥 Incoming student add/update request:");
         System.out.println("  🔹 ID: " + dto.getId());

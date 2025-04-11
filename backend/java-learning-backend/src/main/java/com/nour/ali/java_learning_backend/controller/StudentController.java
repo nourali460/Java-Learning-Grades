@@ -4,6 +4,7 @@ import com.nour.ali.java_learning_backend.dto.StudentRequestDTO;
 import com.nour.ali.java_learning_backend.dto.StudentResponseDTO;
 import com.nour.ali.java_learning_backend.model.AdminRole;
 import com.nour.ali.java_learning_backend.model.Student;
+import com.nour.ali.java_learning_backend.service.AdminService;
 import com.nour.ali.java_learning_backend.service.JwtService;
 import com.nour.ali.java_learning_backend.service.StripeService;
 import com.nour.ali.java_learning_backend.service.StudentService;
@@ -26,35 +27,51 @@ public class StudentController {
     private final StudentService studentService;
     private final JwtService jwtService;
     private final StripeService stripeService;
+    private final AdminService adminService;
+
 
     @Autowired
-    public StudentController(StudentService studentService, JwtService jwtService, StripeService stripeService) {
+    public StudentController(StudentService studentService,
+                             JwtService jwtService,
+                             StripeService stripeService,
+                             AdminService adminService) {
         this.studentService = studentService;
         this.jwtService = jwtService;
         this.stripeService = stripeService;
+        this.adminService = adminService;
     }
 
     @PostMapping("/add")
-    public ResponseEntity<?> addStudent(@RequestBody StudentRequestDTO dto, HttpServletRequest request) {
+    public ResponseEntity<?> addStudent(@RequestBody StudentRequestDTO dto) {
         try {
-            AdminRole role = AdminRole.valueOf(jwtService.extractRole(jwtService.extractToken(request)));
-            if (role != AdminRole.ADMIN && role != AdminRole.SUPERADMIN) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Forbidden: Admin access required"));
+            // ✅ Allow only if admin exists
+            if (dto.getAdmin() == null || dto.getAdmin().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Admin field is required"));
             }
 
+            boolean adminExists = adminService.existsByName(dto.getAdmin());
+            if (!adminExists) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "Invalid admin: professor not found"));
+            }
+
+            // ✅ Validate semester field
             if (dto.getSemesterId() == null || dto.getSemesterId().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Semester ID is required"));
             }
 
-            studentService.addOrUpdateStudent(dto);
-            return ResponseEntity.ok(Map.of("message", "Student added/updated"));
+            // ✅ Add or update the student
+            var response = studentService.addOrUpdateStudent(dto);
+            return ResponseEntity.ok(response); // includes password + info
 
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).body(Map.of("message", e.getReason()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Unexpected error occurred"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Unexpected error occurred"));
         }
     }
+
 
     @DeleteMapping("/remove")
     public ResponseEntity<?> removeEnrollment(@RequestBody StudentRequestDTO dto, HttpServletRequest request) {
