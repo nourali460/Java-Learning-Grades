@@ -145,7 +145,11 @@ public class AdminController {
         Student student = adminService.getStudentById(studentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
 
-        if (!student.getAdmin().equals(adminName)) {
+        // ✅ Check if the current admin added at least one enrollment
+        boolean hasEnrollmentByAdmin = student.getEnrollments().stream()
+                .anyMatch(e -> e.getAdmin().equals(adminName));
+
+        if (!hasEnrollmentByAdmin) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only update passwords for your own students");
         }
 
@@ -153,6 +157,7 @@ public class AdminController {
 
         return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
     }
+
 
     @PostMapping("/updatePassword")
     public ResponseEntity<?> updatePasswordForAnyUser(@RequestBody PasswordUpdateRequestDTO requestDto, HttpServletRequest httpRequest) {
