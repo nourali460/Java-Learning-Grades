@@ -189,7 +189,7 @@ public class StudentService {
 
         return response;
     }
-    
+
 
     private String generateRandomPassword(int length) {
         String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
