@@ -3,7 +3,9 @@ package com.nour.ali.java_learning_backend.controller;
 import com.nour.ali.java_learning_backend.dto.StudentRequestDTO;
 import com.nour.ali.java_learning_backend.dto.StudentResponseDTO;
 import com.nour.ali.java_learning_backend.model.AdminRole;
+import com.nour.ali.java_learning_backend.model.Enrollment;
 import com.nour.ali.java_learning_backend.model.Student;
+import com.nour.ali.java_learning_backend.repository.EnrollmentRepository;
 import com.nour.ali.java_learning_backend.service.AdminService;
 import com.nour.ali.java_learning_backend.service.JwtService;
 import com.nour.ali.java_learning_backend.service.StripeService;
@@ -28,18 +30,23 @@ public class StudentController {
     private final JwtService jwtService;
     private final StripeService stripeService;
     private final AdminService adminService;
+    private final EnrollmentRepository enrollmentRepository;
+
 
 
     @Autowired
     public StudentController(StudentService studentService,
                              JwtService jwtService,
                              StripeService stripeService,
-                             AdminService adminService) {
+                             AdminService adminService,
+                             EnrollmentRepository enrollmentRepository) {
         this.studentService = studentService;
         this.jwtService = jwtService;
         this.stripeService = stripeService;
         this.adminService = adminService;
+        this.enrollmentRepository = enrollmentRepository; // ✅ added
     }
+
 
     @PostMapping("/add")
     public ResponseEntity<?> addStudent(@RequestBody StudentRequestDTO dto) {
@@ -95,14 +102,18 @@ public class StudentController {
     public ResponseEntity<?> validateStudent(@RequestBody StudentRequestDTO dto) {
         Optional<Student> optionalStudent = studentService.findById(dto.getId());
         if (optionalStudent.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "error", "Student not found"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "error", "Student not found"));
         }
 
         Student student = optionalStudent.get();
+
         if (!studentService.validatePassword(dto.getPassword(), student.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "error", "Invalid credentials"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "error", "Invalid credentials"));
         }
 
+        // Check payment status
         if (!student.isPaid()) {
             if (student.getPaymentDate() != null) {
                 Instant now = Instant.now();
@@ -114,18 +125,41 @@ public class StudentController {
                         String newLink = stripeService.generateCheckoutUrl(student.getId());
                         student.setPaymentLink(newLink);
                         studentService.save(student);
-                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("success", false, "error", "Access expired", "paymentLink", newLink));
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(Map.of("success", false, "error", "Access expired", "paymentLink", newLink));
                     } catch (StripeException e) {
-                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "error", "Failed to generate new payment link"));
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(Map.of("success", false, "error", "Failed to generate new payment link"));
                     }
                 }
             }
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("success", false, "error", "Payment required", "paymentLink", student.getPaymentLink()));
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("success", false, "error", "Payment required", "paymentLink", student.getPaymentLink()));
         }
 
+        // ✅ At this point: Student is valid, active, and paid
         String token = jwtService.generateToken(student.getId(), "STUDENT");
-        return ResponseEntity.ok(Map.of("success", true, "token", token));
+
+        // ✅ Fetch enrollments from database (filter by student + admin)
+        List<Enrollment> studentEnrollments = enrollmentRepository.findByStudentIdAndAdmin(dto.getId(), dto.getAdmin());
+
+        // Extract semesterId (assume all enrollments in same semester for this student+admin)
+        String semesterId = studentEnrollments.isEmpty() ? null : studentEnrollments.get(0).getSemesterId();
+
+        // Extract course list
+        List<String> courses = studentEnrollments.stream()
+                .map(Enrollment::getCourse)
+                .toList();
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "token", token,
+                "semesterId", semesterId,
+                "enrollments", courses
+        ));
     }
+
 
     @GetMapping("/whoami")
     public ResponseEntity<?> whoAmI(HttpServletRequest request) {

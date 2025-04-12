@@ -14,6 +14,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Enrollme
     // Get all enrollments by a given admin
     List<Enrollment> findByAdmin(String admin);
 
+    List<Enrollment> findByStudentIdAndAdmin(String studentId, String admin);
+
     // Optional: Delete a specific enrollment
     void deleteById(EnrollmentId id);
 }
