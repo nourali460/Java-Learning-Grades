@@ -12,6 +12,7 @@ public class CorsConfig implements WebMvcConfigurer {
                         "http://localhost:*",
                         "https://nourali460.github.io",
                         "https://cslearningplatform.com",
+                        "https://www.cslearningplatform.com",
                         "https://www.cslearningplatform.com"
                 )
                 .allowedMethods("*")
