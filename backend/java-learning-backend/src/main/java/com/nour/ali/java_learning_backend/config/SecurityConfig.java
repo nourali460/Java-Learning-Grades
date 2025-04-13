@@ -43,13 +43,11 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ✅ use your cors config
+                .headers(headers -> headers.frameOptions().disable())
                 .exceptionHandling(e -> e.authenticationEntryPoint(customEntryPoint))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // ✅ Allow all endpoints without restriction
-                )
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -59,18 +57,15 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // ✅ Allow all origins (pattern version supports credentials)
-        config.setAllowedOriginPatterns(List.of("*"));
-
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedOriginPatterns(List.of("*")); // ✅ allow all origins
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")); // ✅ include OPTIONS
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true); // ✅ works with allowedOriginPatterns("*")
+        config.setAllowCredentials(true); // ✅ only works with allowedOriginPatterns
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
     }
-
 
     @Bean
     public OncePerRequestFilter jwtAuthFilter() {
@@ -79,55 +74,37 @@ public class SecurityConfig {
             protected void doFilterInternal(HttpServletRequest request,
                                             HttpServletResponse response,
                                             FilterChain filterChain) throws ServletException, IOException {
+
                 String method = request.getMethod();
                 String uri = request.getRequestURI();
+
                 System.out.println("➡️ Incoming request: " + method + " " + uri);
 
-                System.out.println("📦 Headers:");
-                Collections.list(request.getHeaderNames()).forEach(name ->
-                        System.out.println("   → " + name + ": " + request.getHeader(name))
-                );
+                if ("OPTIONS".equalsIgnoreCase(method)) {
+                    // 🛑 Let CORS handle OPTIONS preflight — skip JWT
+                    response.setStatus(HttpServletResponse.SC_OK);
+                    return;
+                }
 
                 String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
                     String token = authHeader.substring(7);
-                    System.out.println("🔐 Token received: " + token);
 
                     try {
                         String username = jwtService.extractUsername(token);
                         String role = jwtService.extractRole(token);
                         boolean valid = jwtService.validateToken(token);
 
-                        System.out.println("🧠 Username: " + username);
-                        System.out.println("🎭 Role: " + role);
-                        System.out.println("✅ Is token valid? " + valid);
-
-                        if (username != null &&
-                                valid &&
+                        if (username != null && valid &&
                                 SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                            UsernamePasswordAuthenticationToken authentication =
-                                    new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
-
-                            SecurityContextHolder.getContext().setAuthentication(authentication);
-                            System.out.println("🟢 Authentication successful for: " + username);
-                        } else {
-                            System.out.println("⚠️ Token invalid or already authenticated.");
+                            var auth = new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
+                            SecurityContextHolder.getContext().setAuthentication(auth);
+                            System.out.println("🟢 Authenticated: " + username);
                         }
 
                     } catch (JwtException e) {
                         System.out.println("❌ JWT error: " + e.getMessage());
-                        e.printStackTrace();
-                    } catch (Exception e) {
-                        System.out.println("❌ Unexpected error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-                        e.printStackTrace();
-                    }
-
-                } else {
-                    System.out.println("❗ No Authorization header or malformed header.");
-                    if (authHeader != null) {
-                        System.out.println("   ⛔ Found header: " + authHeader);
                     }
                 }
 
