@@ -58,22 +58,19 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of(
-                "http://localhost:*",
-                "https://nourali460.github.io",
-                "https://cslearningplatform.com",
-                "http://cslearningplatform.com",
-                "http://www.cslearningplatform.com",
-                "https://www.cslearningplatform.com"
-        ));
+
+        // ✅ Allow all origins (pattern version supports credentials)
+        config.setAllowedOriginPatterns(List.of("*"));
+
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+        config.setAllowCredentials(true); // ✅ works with allowedOriginPatterns("*")
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
     }
+
 
     @Bean
     public OncePerRequestFilter jwtAuthFilter() {
