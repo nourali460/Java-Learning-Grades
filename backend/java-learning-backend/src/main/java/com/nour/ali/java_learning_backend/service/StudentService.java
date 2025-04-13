@@ -175,7 +175,7 @@ public class StudentService {
 
         // 🔁 Smart enrollment update
         Optional<Enrollment> existingEnrollment = enrollmentRepository
-                .findByStudentIdAndCourseAndAdmin(dto.getId(), dto.getCourse(), adminUsername);
+                .findByIdStudentIdAndIdCourseAndAdmin(dto.getId(), dto.getCourse(), adminUsername);
 
         if (existingEnrollment.isPresent()) {
             System.out.println("🗑 Deleting previous enrollment in course: " + dto.getCourse() +

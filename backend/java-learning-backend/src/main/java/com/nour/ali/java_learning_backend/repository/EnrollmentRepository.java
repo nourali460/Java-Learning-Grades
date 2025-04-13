@@ -21,6 +21,7 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Enrollme
     void deleteById(EnrollmentId id);
 
 
-    Optional<Enrollment> findByStudentIdAndCourseAndAdmin(String studentId, String course, String admin);
+    Optional<Enrollment> findByIdStudentIdAndIdCourseAndAdmin(String studentId, String course, String admin);
+
 
 }
