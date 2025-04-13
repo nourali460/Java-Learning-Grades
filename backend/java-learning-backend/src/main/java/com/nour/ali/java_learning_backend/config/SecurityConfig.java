@@ -44,7 +44,10 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ✅ use your cors config
-                .headers(headers -> headers.frameOptions().disable())
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.disable())
+                )
+
                 .exceptionHandling(e -> e.authenticationEntryPoint(customEntryPoint))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
@@ -77,19 +80,17 @@ public class SecurityConfig {
 
                 String method = request.getMethod();
                 String uri = request.getRequestURI();
-
                 System.out.println("➡️ Incoming request: " + method + " " + uri);
 
+                // ✅ Let CORS handle preflight fully
                 if ("OPTIONS".equalsIgnoreCase(method)) {
-                    // 🛑 Let CORS handle OPTIONS preflight — skip JWT
-                    response.setStatus(HttpServletResponse.SC_OK);
+                    filterChain.doFilter(request, response);
                     return;
                 }
 
                 String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
                     String token = authHeader.substring(7);
-
                     try {
                         String username = jwtService.extractUsername(token);
                         String role = jwtService.extractRole(token);
@@ -98,7 +99,8 @@ public class SecurityConfig {
                         if (username != null && valid &&
                                 SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                            var auth = new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
+                            var auth = new UsernamePasswordAuthenticationToken(
+                                    username, null, Collections.emptyList());
                             SecurityContextHolder.getContext().setAuthentication(auth);
                             System.out.println("🟢 Authenticated: " + username);
                         }
@@ -112,6 +114,7 @@ public class SecurityConfig {
             }
         };
     }
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {
