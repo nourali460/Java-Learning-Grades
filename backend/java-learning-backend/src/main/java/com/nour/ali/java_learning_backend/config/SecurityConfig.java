@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -49,25 +48,7 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(customEntryPoint))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(
-                                "/h2-console/**",
-                                "/admins/validate",
-                                "/students/validate",
-                                "/students/add",
-                                "/roles",
-                                "/admins",
-                                "/admins/contains",
-                                "/api/stripe/**",
-                                "/",
-                                "/index.html",
-                                "/assets/**",
-                                "/static/**"
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/grades").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/admins/students/passwords").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/grades").authenticated()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll() // ✅ Allow all endpoints without restriction
                 )
                 .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
@@ -103,51 +84,51 @@ public class SecurityConfig {
                                             FilterChain filterChain) throws ServletException, IOException {
                 String method = request.getMethod();
                 String uri = request.getRequestURI();
-                System.out.println("\u27a1\ufe0f Incoming request: " + method + " " + uri);
+                System.out.println("➡️ Incoming request: " + method + " " + uri);
 
-                System.out.println("\ud83d\udce6 Headers:");
+                System.out.println("📦 Headers:");
                 Collections.list(request.getHeaderNames()).forEach(name ->
-                        System.out.println("   → " + name + ": " + request.getHeader(name)));
+                        System.out.println("   → " + name + ": " + request.getHeader(name))
+                );
 
                 String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
                     String token = authHeader.substring(7);
-                    System.out.println("\ud83d\udd10 Token received: " + token);
+                    System.out.println("🔐 Token received: " + token);
 
                     try {
                         String username = jwtService.extractUsername(token);
                         String role = jwtService.extractRole(token);
                         boolean valid = jwtService.validateToken(token);
 
-                        System.out.println("\ud83e\uddd0 Username: " + username);
-                        System.out.println("\ud83c\udfad Role: " + role);
-                        System.out.println("\u2705 Is token valid? " + valid);
+                        System.out.println("🧠 Username: " + username);
+                        System.out.println("🎭 Role: " + role);
+                        System.out.println("✅ Is token valid? " + valid);
 
                         if (username != null &&
                                 valid &&
                                 SecurityContextHolder.getContext().getAuthentication() == null) {
 
                             UsernamePasswordAuthenticationToken authentication =
-                                    new UsernamePasswordAuthenticationToken(
-                                            username, null, Collections.emptyList());
+                                    new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
 
                             SecurityContextHolder.getContext().setAuthentication(authentication);
-                            System.out.println("\ud83d\udfe2 Authentication successful for: " + username);
+                            System.out.println("🟢 Authentication successful for: " + username);
                         } else {
-                            System.out.println("\u26a0\ufe0f Token invalid or already authenticated.");
+                            System.out.println("⚠️ Token invalid or already authenticated.");
                         }
 
                     } catch (JwtException e) {
-                        System.out.println("\u274c JWT error: " + e.getMessage());
+                        System.out.println("❌ JWT error: " + e.getMessage());
                         e.printStackTrace();
                     } catch (Exception e) {
-                        System.out.println("\u274c Unexpected error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                        System.out.println("❌ Unexpected error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                         e.printStackTrace();
                     }
 
                 } else {
-                    System.out.println("\u2757 No Authorization header or malformed header.");
+                    System.out.println("❗ No Authorization header or malformed header.");
                     if (authHeader != null) {
                         System.out.println("   ⛔ Found header: " + authHeader);
                     }
