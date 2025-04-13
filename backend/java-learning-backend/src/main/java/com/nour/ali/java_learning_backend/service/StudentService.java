@@ -1,5 +1,6 @@
 package com.nour.ali.java_learning_backend.service;
 
+import com.nour.ali.java_learning_backend.dto.EnrolledStudentDTO;
 import com.nour.ali.java_learning_backend.dto.EnrollmentDTO;
 import com.nour.ali.java_learning_backend.dto.StudentRequestDTO;
 import com.nour.ali.java_learning_backend.dto.StudentResponseDTO;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -66,16 +68,21 @@ public class StudentService {
     public Optional<Student> findById(String id) {
         return studentRepository.findById(id);
     }
-    public List<Student> getStudentsByAdmin(String admin) {
-        List<Enrollment> enrollments = enrollmentRepository.findByAdmin(admin);
-        Set<String> studentIds = enrollments.stream()
-                .map(e -> e.getStudent().getId())
-                .collect(Collectors.toSet());
 
-        return studentRepository.findAll().stream()
-                .filter(s -> studentIds.contains(s.getId()))
-                .collect(Collectors.toList());
+    @Transactional
+    public List<EnrolledStudentDTO> getStudentsByAdmin(String admin) {
+        List<Enrollment> enrollments = enrollmentRepository.findByAdmin(admin);
+
+        return enrollments.stream()
+                .map(e -> new EnrolledStudentDTO(
+                        e.getStudent().getId(),
+                        e.getStudent().getEmail(), // ✅ safe here
+                        e.getSemesterId(),
+                        e.getCourse()
+                ))
+                .toList();
     }
+
 
     public StudentResponseDTO toResponseDTO(Student student) {
         List<EnrollmentDTO> enrollmentDTOs = student.getEnrollments().stream()
@@ -166,7 +173,7 @@ public class StudentService {
         student = studentRepository.save(student);
         System.out.println("✅ Student saved to DB: " + student.getId());
 
-        // 🔁 Smart enrollment update: delete old enrollment by studentId + course + admin
+        // 🔁 Smart enrollment update
         Optional<Enrollment> existingEnrollment = enrollmentRepository
                 .findByStudentIdAndCourseAndAdmin(dto.getId(), dto.getCourse(), adminUsername);
 
@@ -189,9 +196,14 @@ public class StudentService {
         response.put("studentId", student.getId());
         response.put("email", student.getEmail());
         response.put("password", rawPassword != null ? rawPassword : "unchanged");
+        response.put("enrollment", Map.of(
+                "course", dto.getCourse(),
+                "semesterId", dto.getSemesterId()
+        ));
 
         return response;
     }
+
 
 
 

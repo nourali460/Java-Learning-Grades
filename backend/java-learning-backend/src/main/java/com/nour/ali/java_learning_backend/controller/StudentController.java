@@ -230,15 +230,34 @@ public class StudentController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Forbidden: Admin access required"));
             }
 
-            List<Student> all = studentService.getStudentsByAdmin(admin);
-            List<StudentResponseDTO> dtos = all.stream()
-                    .map(studentService::toResponseDTO)
-                    .toList();
+            // Group enrollments by student
+            List<Enrollment> enrollments = enrollmentRepository.findByAdmin(admin);
 
-            return ResponseEntity.ok(dtos);
+            Map<String, Map<String, Object>> response = new HashMap<>();
+
+            for (Enrollment e : enrollments) {
+                String studentId = e.getStudent().getId();
+                String email = e.getStudent().getEmail();
+                String course = e.getCourse();
+                String semester = e.getSemesterId();
+
+                response.computeIfAbsent(studentId, id -> {
+                    Map<String, Object> studentData = new HashMap<>();
+                    studentData.put("email", email);
+                    studentData.put("enrollments", new HashMap<String, String>());
+                    return studentData;
+                });
+
+                Map<String, String> studentEnrollments = (Map<String, String>) response.get(studentId).get("enrollments");
+                studentEnrollments.put(course, semester);
+            }
+
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Failed to fetch students"));
         }
     }
+
 }
