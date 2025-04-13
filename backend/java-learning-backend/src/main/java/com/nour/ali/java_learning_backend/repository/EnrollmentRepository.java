@@ -5,6 +5,7 @@ import com.nour.ali.java_learning_backend.model.EnrollmentId;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface EnrollmentRepository extends JpaRepository<Enrollment, EnrollmentId> {
 
@@ -18,4 +19,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Enrollme
 
     // Optional: Delete a specific enrollment
     void deleteById(EnrollmentId id);
+
+
+    Optional<Enrollment> findByStudentIdAndCourseAndAdmin(String studentId, String course, String admin);
+
 }

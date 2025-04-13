@@ -102,11 +102,10 @@ public class StudentService {
         System.out.println("  🔹 Semester: " + dto.getSemesterId());
         System.out.println("  🔹 Admin (from DTO): " + dto.getAdmin());
 
-        // ✅ Determine admin source: from token or DTO
         String authenticatedUser = SecurityContextHolder.getContext().getAuthentication().getName();
         String adminUsername = authenticatedUser != null && !authenticatedUser.equals("anonymousUser")
                 ? authenticatedUser
-                : dto.getAdmin(); // fallback to provided admin
+                : dto.getAdmin();
 
         if (adminUsername == null || adminUsername.isBlank()) {
             System.out.println("❌ No valid admin in token or DTO.");
@@ -167,19 +166,23 @@ public class StudentService {
         student = studentRepository.save(student);
         System.out.println("✅ Student saved to DB: " + student.getId());
 
-        EnrollmentId enrollmentId = new EnrollmentId(dto.getId(), dto.getCourse(), dto.getSemesterId());
-        if (!enrollmentRepository.existsById(enrollmentId)) {
-            System.out.println("📚 Enrolling student in course: " + dto.getCourse() + " | Semester: " + dto.getSemesterId());
-            Enrollment enrollment = new Enrollment();
-            enrollment.setId(enrollmentId);
-            enrollment.setStudent(student);
-            enrollment.setAdmin(adminUsername); // ✅ now guaranteed to be correct
+        // 🔁 Smart enrollment update: delete old enrollment by studentId + course + admin
+        Optional<Enrollment> existingEnrollment = enrollmentRepository
+                .findByStudentIdAndCourseAndAdmin(dto.getId(), dto.getCourse(), adminUsername);
 
-            enrollmentRepository.save(enrollment);
-            System.out.println("✅ Enrollment created.");
-        } else {
-            System.out.println("⚠️ Student already enrolled in this course/semester.");
+        if (existingEnrollment.isPresent()) {
+            System.out.println("🗑 Deleting previous enrollment in course: " + dto.getCourse() +
+                    " (was in semester: " + existingEnrollment.get().getSemesterId() + ")");
+            enrollmentRepository.delete(existingEnrollment.get());
         }
+
+        EnrollmentId newEnrollmentId = new EnrollmentId(dto.getId(), dto.getCourse(), dto.getSemesterId());
+        Enrollment newEnrollment = new Enrollment();
+        newEnrollment.setId(newEnrollmentId);
+        newEnrollment.setStudent(student);
+        newEnrollment.setAdmin(adminUsername);
+        enrollmentRepository.save(newEnrollment);
+        System.out.println("✅ Created enrollment with updated semester: " + dto.getSemesterId());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -189,6 +192,8 @@ public class StudentService {
 
         return response;
     }
+
+
 
 
     private String generateRandomPassword(int length) {
