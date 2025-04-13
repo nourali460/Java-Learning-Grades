@@ -100,6 +100,7 @@ public class StudentController {
 
     @PostMapping("/validate")
     public ResponseEntity<?> validateStudent(@RequestBody StudentRequestDTO dto) {
+        // 🔍 1. Check if student exists in DB
         Optional<Student> optionalStudent = studentService.findById(dto.getId());
         if (optionalStudent.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -108,16 +109,19 @@ public class StudentController {
 
         Student student = optionalStudent.get();
 
+        // 🔐 2. Validate password
         if (!studentService.validatePassword(dto.getPassword(), student.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("success", false, "error", "Invalid credentials"));
         }
 
-        // Check payment status
+        // 💳 3. Handle payment check
         if (!student.isPaid()) {
             if (student.getPaymentDate() != null) {
                 Instant now = Instant.now();
                 Instant expiration = student.getPaymentDate().plus(365, ChronoUnit.DAYS);
+
+                // ⌛ Expired access, generate new link and update record
                 if (now.isAfter(expiration)) {
                     try {
                         student.setPaid(false);
@@ -125,6 +129,7 @@ public class StudentController {
                         String newLink = stripeService.generateCheckoutUrl(student.getId());
                         student.setPaymentLink(newLink);
                         studentService.save(student);
+
                         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                                 .body(Map.of("success", false, "error", "Access expired", "paymentLink", newLink));
                     } catch (StripeException e) {
@@ -134,29 +139,30 @@ public class StudentController {
                 }
             }
 
+            // ❌ Payment still required
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("success", false, "error", "Payment required", "paymentLink", student.getPaymentLink()));
         }
 
-        // ✅ At this point: Student is valid, active, and paid
+        // 🔓 4. All checks passed: active + paid
         String token = jwtService.generateToken(student.getId(), "STUDENT");
 
-        // ✅ Fetch enrollments from database (filter by student + admin)
+        // 📦 5. Fetch all enrollments for this student under the specified professor (admin)
         List<Enrollment> studentEnrollments = enrollmentRepository.findByStudentIdAndAdmin(dto.getId(), dto.getAdmin());
 
-        // Extract semesterId (assume all enrollments in same semester for this student+admin)
-        String semesterId = studentEnrollments.isEmpty() ? null : studentEnrollments.get(0).getSemesterId();
-
-        // Extract course list
-        List<String> courses = studentEnrollments.stream()
-                .map(Enrollment::getCourse)
+        // 📊 6. Map enrollments to a list of {course, semesterId} objects
+        List<Map<String, String>> enrollments = studentEnrollments.stream()
+                .map(e -> Map.of(
+                        "course", e.getCourse(),
+                        "semesterId", e.getSemesterId()
+                ))
                 .toList();
 
+        // ✅ 7. Return success response with JWT and filtered enrollments
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "token", token,
-                "semesterId", semesterId,
-                "enrollments", courses
+                "enrollments", enrollments
         ));
     }
 
