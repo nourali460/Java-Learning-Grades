@@ -9,14 +9,16 @@ public class CorsConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOriginPatterns(
-                        "http://localhost:*",
-                        "https://nourali460.github.io",
                         "https://cslearningplatform.com",
                         "https://www.cslearningplatform.com",
-                        "https://www.cslearningplatform.com"
+                        "http://cslearningplatform.com",
+                        "http://www.cslearningplatform.com",          
+                        "https://nourali460.github.io",
+                        "http://localhost:*"
                 )
                 .allowedMethods("*")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }
+
 }

@@ -81,6 +81,8 @@ public class SecurityConfig {
                 "http://localhost:*",
                 "https://nourali460.github.io",
                 "https://cslearningplatform.com",
+                "http://cslearningplatform.com",
+                "http://www.cslearningplatform.com",
                 "https://www.cslearningplatform.com"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
