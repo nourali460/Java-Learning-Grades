@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -209,12 +210,24 @@ public class StudentService {
 
 
     private String generateRandomPassword(int length) {
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        if (length < 3) throw new IllegalArgumentException("Password length must be at least 3");
+
+        String letters = "abcdefghijklmnopqrstuvwxyz";
+        String digits = "0123456789";
+        SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder(length);
-        Random random = new Random();
-        for (int i = 0; i < length; i++) {
-            sb.append(characters.charAt(random.nextInt(characters.length())));
+
+        // First 2: lowercase letters
+        for (int i = 0; i < 2; i++) {
+            sb.append(letters.charAt(random.nextInt(letters.length())));
         }
+
+        // Remaining: digits
+        for (int i = 2; i < length; i++) {
+            sb.append(digits.charAt(random.nextInt(digits.length())));
+        }
+
         return sb.toString();
     }
+
 }
