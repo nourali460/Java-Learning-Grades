@@ -115,33 +115,21 @@ public class StudentController {
                     .body(Map.of("success", false, "error", "Invalid credentials"));
         }
 
-        // 💳 3. Handle payment check
+        // 💳 3. Always generate a new Stripe link if student is unpaid
         if (!student.isPaid()) {
-            if (student.getPaymentDate() != null) {
-                Instant now = Instant.now();
-                Instant expiration = student.getPaymentDate().plus(365, ChronoUnit.DAYS);
+            try {
+                String newLink = stripeService.generateCheckoutUrl(student.getId());
+                student.setPaymentLink(newLink);
+                student.setPaid(false);
+                student.setActive(false);
+                studentService.save(student);
 
-                // ⌛ Expired access, generate new link and update record
-                if (now.isAfter(expiration)) {
-                    try {
-                        student.setPaid(false);
-                        student.setActive(false);
-                        String newLink = stripeService.generateCheckoutUrl(student.getId());
-                        student.setPaymentLink(newLink);
-                        studentService.save(student);
-
-                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                .body(Map.of("success", false, "error", "Access expired", "paymentLink", newLink));
-                    } catch (StripeException e) {
-                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Map.of("success", false, "error", "Failed to generate new payment link"));
-                    }
-                }
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("success", false, "error", "Payment required", "paymentLink", newLink));
+            } catch (StripeException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("success", false, "error", "Failed to generate payment link"));
             }
-
-            // ❌ Payment still required
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("success", false, "error", "Payment required", "paymentLink", student.getPaymentLink()));
         }
 
         // 🔓 4. All checks passed: active + paid
@@ -165,8 +153,7 @@ public class StudentController {
                 "enrollments", enrollments
         ));
     }
-
-
+    
     @GetMapping("/whoami")
     public ResponseEntity<?> whoAmI(HttpServletRequest request) {
         try {
