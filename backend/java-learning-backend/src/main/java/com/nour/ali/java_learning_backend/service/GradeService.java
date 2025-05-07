@@ -74,9 +74,15 @@ public class GradeService {
         grade.setAdmin(dto.getAdmin());
         grade.setSemesterId(dto.getSemesterId());
 
+        // ✅ NEW: Set submitted files
+        if (dto.getSubmittedFiles() != null) {
+            grade.setSubmittedFiles(dto.getSubmittedFiles());
+        }
+
         Grade saved = gradeRepository.save(grade);
         System.out.println("✅ Grade saved successfully to DB!");
 
+        // ✅ NEW: Return submitted files in response
         return new GradeResponseDTO(
                 saved.getStudentId(),
                 saved.getCourse(),
@@ -85,7 +91,8 @@ public class GradeService {
                 saved.getConsoleOutput(),
                 saved.getTimestamp(),
                 saved.getAdmin(),
-                saved.getSemesterId()
+                saved.getSemesterId(),
+                saved.getSubmittedFiles()
         );
     }
 

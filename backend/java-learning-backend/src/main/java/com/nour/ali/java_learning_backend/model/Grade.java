@@ -2,6 +2,8 @@ package com.nour.ali.java_learning_backend.model;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 @Entity
 @IdClass(GradeId.class)
@@ -30,8 +32,21 @@ public class Grade {
 
     private String admin;
 
-    public Grade() {
-    }
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "submitted_files",
+            joinColumns = {
+                    @JoinColumn(name = "student_id", referencedColumnName = "studentId"),
+                    @JoinColumn(name = "course", referencedColumnName = "course"),
+                    @JoinColumn(name = "assignment", referencedColumnName = "assignment"),
+                    @JoinColumn(name = "semester_id", referencedColumnName = "semesterId")
+            }
+    )
+    @MapKeyColumn(name = "filename")
+    @Column(name = "file_content", columnDefinition = "TEXT")
+    private Map<String, String> submittedFiles = new HashMap<>();
+
+    public Grade() {}
 
     // --- Getters & Setters ---
 
@@ -99,6 +114,14 @@ public class Grade {
         this.semesterId = semesterId;
     }
 
+    public Map<String, String> getSubmittedFiles() {
+        return submittedFiles;
+    }
+
+    public void setSubmittedFiles(Map<String, String> submittedFiles) {
+        this.submittedFiles = submittedFiles;
+    }
+
     @Override
     public String toString() {
         return "Grade{" +
@@ -109,6 +132,7 @@ public class Grade {
                 ", timestamp=" + timestamp +
                 ", admin='" + admin + '\'' +
                 ", semesterId='" + semesterId + '\'' +
+                ", submittedFiles=" + submittedFiles.keySet() +
                 '}';
     }
 }

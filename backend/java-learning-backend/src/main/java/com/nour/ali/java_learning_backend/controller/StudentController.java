@@ -153,7 +153,7 @@ public class StudentController {
                 "enrollments", enrollments
         ));
     }
-    
+
     @GetMapping("/whoami")
     public ResponseEntity<?> whoAmI(HttpServletRequest request) {
         try {

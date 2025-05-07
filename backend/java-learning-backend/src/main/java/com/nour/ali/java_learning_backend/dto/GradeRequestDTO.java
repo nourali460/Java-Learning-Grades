@@ -1,6 +1,7 @@
 package com.nour.ali.java_learning_backend.dto;
 
 import java.time.Instant;
+import java.util.Map;
 
 public class GradeRequestDTO {
 
@@ -11,13 +12,16 @@ public class GradeRequestDTO {
     private String consoleOutput;
     private Instant timestamp;
     private String admin;
-    private String semesterId; // ✅ NEW FIELD
+    private String semesterId;
+
+    private Map<String, String> submittedFiles; // ✅ NEW FIELD
 
     public GradeRequestDTO() {
     }
 
     public GradeRequestDTO(String studentId, String course, String assignment, String grade,
-                           String consoleOutput, Instant timestamp, String admin, String semesterId) {
+                           String consoleOutput, Instant timestamp, String admin,
+                           String semesterId, Map<String, String> submittedFiles) {
         this.studentId = studentId;
         this.course = course;
         this.assignment = assignment;
@@ -26,7 +30,10 @@ public class GradeRequestDTO {
         this.timestamp = timestamp;
         this.admin = admin;
         this.semesterId = semesterId;
+        this.submittedFiles = submittedFiles;
     }
+
+    // --- Getters & Setters ---
 
     public String getStudentId() {
         return studentId;
@@ -90,5 +97,13 @@ public class GradeRequestDTO {
 
     public void setSemesterId(String semesterId) {
         this.semesterId = semesterId;
+    }
+
+    public Map<String, String> getSubmittedFiles() {
+        return submittedFiles;
+    }
+
+    public void setSubmittedFiles(Map<String, String> submittedFiles) {
+        this.submittedFiles = submittedFiles;
     }
 }
